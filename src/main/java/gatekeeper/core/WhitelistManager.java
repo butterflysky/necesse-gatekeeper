@@ -7,7 +7,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -15,12 +14,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
-import necesse.engine.GlobalData;
 import necesse.engine.network.server.Server;
+import necesse.engine.world.World;
 
 public class WhitelistManager {
-    private static final String CONFIG_DIR = GlobalData.appDataPath() + "mods/GateKeeper";
-    private static final String CONFIG_FILE = CONFIG_DIR + "/whitelist.txt";
+    // Per-world computed config path
+    private File configDir;
+    private File configFile;
+    private long currentWorldId = Long.MIN_VALUE;
 
     private final Set<Long> authIds = new HashSet<>();
     private final Set<String> namesLower = new HashSet<>();
@@ -30,20 +31,34 @@ public class WhitelistManager {
     private final Map<Long, Long> lastNotify = new HashMap<>();
 
     public boolean isEnabled() { return enabled; }
-    public void setEnabled(boolean value) { enabled = value; save(); }
+    public void setEnabled(Server server, boolean value) { ensureWorld(server); enabled = value; saveInternal(); }
+    private void ensureWorld(Server server) {
+        if (server == null || server.world == null) return;
+        long wid = server.world.getUniqueID();
+        if (wid == currentWorldId && configFile != null) return;
+        File worldPath = server.world.filePath;
+        if (World.isWorldADirectory(worldPath)) {
+            configDir = new File(worldPath, "GateKeeper");
+        } else {
+            String baseName = World.getWorldDisplayName(worldPath.getName());
+            configDir = new File(worldPath.getParentFile(), baseName + ".GateKeeper");
+        }
+        configFile = new File(configDir, "whitelist.txt");
+        currentWorldId = wid;
+        loadInternal();
+    }
 
-    public synchronized void load() {
+    private synchronized void loadInternal() {
         authIds.clear();
         namesLower.clear();
         enabled = true;
-        File dir = new File(CONFIG_DIR);
-        if (!dir.exists()) dir.mkdirs();
-        File file = new File(CONFIG_FILE);
-        if (!file.exists()) {
-            save();
+        if (configDir == null || configFile == null) return;
+        if (!configDir.exists()) configDir.mkdirs();
+        if (!configFile.exists()) {
+            saveInternal();
             return;
         }
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(configFile))) {
             String line;
             while ((line = br.readLine()) != null) {
                 line = line.trim();
@@ -66,11 +81,10 @@ public class WhitelistManager {
         }
     }
 
-    public synchronized void save() {
-        File dir = new File(CONFIG_DIR);
-        if (!dir.exists()) dir.mkdirs();
-        File file = new File(CONFIG_FILE);
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+    private synchronized void saveInternal() {
+        if (configDir == null || configFile == null) return;
+        if (!configDir.exists()) configDir.mkdirs();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(configFile))) {
             bw.write("# GateKeeper whitelist\n");
             bw.write("enabled=" + enabled + "\n");
             for (Long a : authIds) {
@@ -84,30 +98,33 @@ public class WhitelistManager {
         }
     }
 
-    public synchronized boolean isWhitelisted(long auth, String name) {
+    public synchronized boolean isWhitelisted(Server server, long auth, String name) {
+        ensureWorld(server);
         if (!enabled) return true; // disabled means allow all
         if (authIds.contains(auth)) return true;
         if (name != null && namesLower.contains(name.toLowerCase(Locale.ENGLISH))) return true;
         return false;
     }
 
-    public synchronized boolean addAuth(long auth) { boolean added = authIds.add(auth); if (added) save(); return added; }
-    public synchronized boolean removeAuth(long auth) { boolean rem = authIds.remove(auth); if (rem) save(); return rem; }
-    public synchronized boolean addName(String name) {
+    public synchronized boolean addAuth(Server server, long auth) { ensureWorld(server); boolean added = authIds.add(auth); if (added) saveInternal(); return added; }
+    public synchronized boolean removeAuth(Server server, long auth) { ensureWorld(server); boolean rem = authIds.remove(auth); if (rem) saveInternal(); return rem; }
+    public synchronized boolean addName(Server server, String name) {
+        ensureWorld(server);
         if (name == null) return false;
         boolean added = namesLower.add(name.toLowerCase(Locale.ENGLISH));
-        if (added) save();
+        if (added) saveInternal();
         return added;
     }
-    public synchronized boolean removeName(String name) {
+    public synchronized boolean removeName(Server server, String name) {
+        ensureWorld(server);
         if (name == null) return false;
         boolean rem = namesLower.remove(name.toLowerCase(Locale.ENGLISH));
-        if (rem) save();
+        if (rem) saveInternal();
         return rem;
     }
 
-    public synchronized List<Long> listAuths() { return new ArrayList<>(authIds); }
-    public synchronized List<String> listNames() { return new ArrayList<>(namesLower); }
+    public synchronized List<Long> listAuths(Server server) { ensureWorld(server); return new ArrayList<>(authIds); }
+    public synchronized List<String> listNames(Server server) { ensureWorld(server); return new ArrayList<>(namesLower); }
 
     public synchronized Long findAuthByName(Server server, String name) {
         if (server == null || name == null) return null;
@@ -139,4 +156,3 @@ public class WhitelistManager {
         return System.currentTimeMillis() - last > cooldownMs;
     }
 }
-

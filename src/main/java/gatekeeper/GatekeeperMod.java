@@ -19,9 +19,8 @@ public class GatekeeperMod {
     public void init() {
         System.out.println(MOD_NAME + " is loading...");
 
-        // Initialize whitelist manager (loads config from app data)
+        // Initialize whitelist manager (per-world config will load on first use)
         whitelistManager = new WhitelistManager();
-        whitelistManager.load();
 
         // Register server command: /whitelist
         CommandsManager.registerServerCommand(new WhitelistCommand(whitelistManager));

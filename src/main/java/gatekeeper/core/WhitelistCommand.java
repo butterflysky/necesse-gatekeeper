@@ -39,22 +39,22 @@ public class WhitelistCommand extends ModularChatCommand {
         String sub = parts[0].toLowerCase(Locale.ENGLISH);
         switch (sub) {
             case "enable":
-                manager.setEnabled(true);
+                manager.setEnabled(server, true);
                 logs.add("GateKeeper whitelist enabled");
                 break;
             case "disable":
-                manager.setEnabled(false);
+                manager.setEnabled(server, false);
                 logs.add("GateKeeper whitelist disabled");
                 break;
             case "status":
                 logs.add("Whitelist is " + (manager.isEnabled() ? "ENABLED" : "DISABLED"));
-                logs.add("Auth IDs: " + manager.listAuths().size() + ", Names: " + manager.listNames().size());
+                logs.add("Auth IDs: " + manager.listAuths(server).size() + ", Names: " + manager.listNames(server).size());
                 break;
             case "list":
-                List<Long> auths = manager.listAuths();
+                List<Long> auths = manager.listAuths(server);
                 Collections.sort(auths);
                 logs.add("Auth IDs (" + auths.size() + "): " + auths);
-                List<String> names = manager.listNames();
+                List<String> names = manager.listNames(server);
                 names.sort(Comparator.naturalOrder());
                 logs.add("Names (" + names.size() + "): " + names);
                 break;
@@ -76,16 +76,16 @@ public class WhitelistCommand extends ModularChatCommand {
     private void handleAdd(Server server, CommandLog logs, String token) {
         try {
             long auth = Long.parseLong(token);
-            boolean added = manager.addAuth(auth);
+            boolean added = manager.addAuth(server, auth);
             logs.add((added ? "Added" : "Already present") + " auth: " + auth);
         } catch (NumberFormatException nfe) {
             // treat as name
             Long auth = manager.findAuthByName(server, token);
             if (auth != null) {
-                boolean added = manager.addAuth(auth);
+                boolean added = manager.addAuth(server, auth);
                 logs.add((added ? "Added" : "Already present") + " auth from name \"" + token + "\": " + auth);
             } else {
-                boolean added = manager.addName(token);
+                boolean added = manager.addName(server, token);
                 logs.add((added ? "Added" : "Already present") + " name: " + token + ". Will allow matching name on connect.");
             }
         }
@@ -94,10 +94,10 @@ public class WhitelistCommand extends ModularChatCommand {
     private void handleRemove(Server server, CommandLog logs, String token) {
         try {
             long auth = Long.parseLong(token);
-            boolean removed = manager.removeAuth(auth);
+            boolean removed = manager.removeAuth(server, auth);
             logs.add((removed ? "Removed" : "Not present") + " auth: " + auth);
         } catch (NumberFormatException nfe) {
-            boolean removed = manager.removeName(token);
+            boolean removed = manager.removeName(server, token);
             logs.add((removed ? "Removed" : "Not present") + " name: " + token);
         }
     }
@@ -111,4 +111,3 @@ public class WhitelistCommand extends ModularChatCommand {
         logs.add("/whitelist deny <auth|name>");
     }
 }
-

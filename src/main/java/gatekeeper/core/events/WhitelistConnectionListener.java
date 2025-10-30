@@ -1,7 +1,6 @@
 package gatekeeper.core.events;
 
 import gatekeeper.core.WhitelistManager;
-import necesse.engine.GameEvents;
 import necesse.engine.GameEventInterface;
 import necesse.engine.events.ServerClientConnectedEvent;
 import necesse.engine.network.packet.PacketChatMessage;
@@ -35,7 +34,7 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         String name = c.getName();
 
         if (!manager.isEnabled()) return;
-        if (manager.isWhitelisted(auth, name)) return;
+        if (manager.isWhitelisted(server, auth, name)) return;
 
         // Notify admins/owners with rate limit
         if (manager.shouldNotify(auth, NOTIFY_COOLDOWN_MS)) {
@@ -64,4 +63,3 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         disposed = true;
     }
 }
-
