@@ -233,9 +233,13 @@ tasks.register('decompileNecesseSourcesJar', Exec) { t ->
     doFirst {
         def vfJar = configurations.vineflower.singleFile
         def outJar = sourcesJarProvider.get()
+        def inJar = file(gameDirectory + "/Necesse.jar")
+        if (outJar.absolutePath == inJar.absolutePath) {
+            throw new GradleException("Refusing to overwrite Necesse.jar; destination equals source")
+        }
         commandLine = [ 'java', '-jar', vfJar.absolutePath,
             '--file',
-            file(gameDirectory + "/Necesse.jar").absolutePath,
+            inJar.absolutePath,
             outJar.absolutePath ]
     }
 }
@@ -256,8 +260,11 @@ publishing {
             // Main binary jar: point to the installed game jar
             artifact(file(gameDirectory + "/Necesse.jar"))
 
-            // Attach sources jar
-            artifact(providers.provider { new File(sourcesOutDir.get().asFile, "necesse-${project.ext.gameVersion}-sources.jar") }) { classifier = 'sources' }
+            // Attach sources jar and ensure it's built first
+            artifact(providers.provider { new File(sourcesOutDir.get().asFile, "necesse-${project.ext.gameVersion}-sources.jar") }) {
+                classifier = 'sources'
+                builtBy(tasks.named('decompileNecesseSourcesJar'))
+            }
         }
     }
     repositories {
