@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'maven-publish'
+    id 'eclipse'
 }
 
 // Change the values below this to your mods values
@@ -269,6 +270,13 @@ publishing {
     }
     repositories {
         mavenLocal()
+    }
+}
+
+// Help JDT LS (VS Code) auto-attach sources when importing Gradle project
+eclipse {
+    classpath {
+        downloadSources = true
     }
 }
 
