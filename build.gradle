@@ -219,22 +219,7 @@ task buildModJar(type: Jar) {
 // ----------------------------------------------------------------------------
 // Decompile Necesse.jar into a directory for IDE reference only (not compiled)
 // ----------------------------------------------------------------------------
-def decompiledOutDir = layout.projectDirectory.dir("external/necesse-src").asFile
-
-// Legacy task: decompile to a directory (kept for browsing if desired)
-tasks.register('decompileNecesse', Exec) { t ->
-    group = "necesse"
-    description = "Decompiles Necesse.jar into external/necesse-src using Vineflower (folder output)"
-    doFirst { decompiledOutDir.mkdirs() }
-    inputs.file(file(gameDirectory + "/Necesse.jar"))
-    outputs.dir(decompiledOutDir)
-    doFirst {
-        def vfJar = configurations.vineflower.singleFile
-        commandLine = [ 'java', '-jar', vfJar.absolutePath,
-            file(gameDirectory + "/Necesse.jar").absolutePath,
-            decompiledOutDir.absolutePath ]
-    }
-}
+// No folder-based decompile; we generate a sources JAR instead.
 
 // New task: decompile directly into a sources JAR to avoid folder noise
 def sourcesOutDir = layout.buildDirectory.dir('necesse')
@@ -258,12 +243,7 @@ tasks.register('decompileNecesseSourcesJar', Exec) { t ->
 // Pack decompiled sources as a sources jar and publish Necesse to mavenLocal
 // ----------------------------------------------------------------------------
 
-// packNecesseSources no longer needed when using -file; keep as alias to decompile jar for compatibility
-tasks.register('packNecesseSources') { t ->
-    group = "necesse"
-    description = "Builds the Necesse -sources.jar (alias)"
-    dependsOn('decompileNecesseSourcesJar')
-}
+// No packNecesseSources alias needed; decompileNecesseSourcesJar produces the sources JAR.
 
 publishing {
     publications {
@@ -273,9 +253,7 @@ publishing {
             version = project.ext.gameVersion
 
             // Main binary jar: point to the installed game jar
-            artifact(file(gameDirectory + "/Necesse.jar")) {
-                builtBy(tasks.named('decompileNecesse')) // ensure existence before publish
-            }
+            artifact(file(gameDirectory + "/Necesse.jar"))
 
             // Attach sources jar
             artifact(providers.provider { new File(sourcesOutDir.get().asFile, "necesse-${project.ext.gameVersion}-sources.jar") }) { classifier = 'sources' }
@@ -304,25 +282,16 @@ tasks.named('publishNecessePublicationToMavenLocal') {
 // ----------------------------------------------------------------------------
 tasks.register('updateGameVersion') { t ->
     group = "necesse"
-    description = "Updates project.ext.gameVersion from external/necesse-src/.../GameInfo.java"
-    // Prefer sources jar; fall back to folder if present
+    description = "Updates project.ext.gameVersion from decompiled GameInfo.java in the sources JAR"
     dependsOn('decompileNecesseSourcesJar')
     doLast {
-        def txt = null
         def sourcesJar = new File(sourcesOutDir.get().asFile, "necesse-${project.ext.gameVersion}-sources.jar")
-        if (sourcesJar.exists()) {
-            def zip = new java.util.zip.ZipFile(sourcesJar)
-            def entry = zip.getEntry('necesse/engine/GameInfo.java')
-            if (entry != null) {
-                txt = new String(zip.getInputStream(entry).bytes, 'UTF-8')
-            }
-            zip.close()
-        }
-        if (txt == null) {
-            def gi = file('external/necesse-src/necesse/engine/GameInfo.java')
-            if (!gi.exists()) throw new GradleException("GameInfo.java not found in sources jar or external folder.")
-            txt = gi.getText('UTF-8')
-        }
+        if (!sourcesJar.exists()) throw new GradleException("Sources JAR not found. Run decompileNecesseSourcesJar.")
+        def zip = new java.util.zip.ZipFile(sourcesJar)
+        def entry = zip.getEntry('necesse/engine/GameInfo.java')
+        if (entry == null) throw new GradleException("GameInfo.java not found in sources JAR")
+        def txt = new String(zip.getInputStream(entry).bytes, 'UTF-8')
+        zip.close()
         def m = (txt =~ /new\s+GameVersion\(\"([^\"]+)\"\)/)
         if (!m.find()) throw new GradleException("Could not extract version from GameInfo.java")
         def ver = m.group(1)
@@ -345,21 +314,7 @@ tasks.register('updateGameVersion') { t ->
 // ----------------------------------------------------------------------------
 tasks.register('devSetup') {
     group = "necesse"
-    description = "Decompile, sync gameVersion, pack sources, and publish to mavenLocal"
+    description = "Decompile, sync gameVersion, and publish to mavenLocal"
     dependsOn('decompileNecesseSourcesJar', 'updateGameVersion')
     finalizedBy('publishNecessePublicationToMavenLocal')
-}
-
-// Optional cleanup of old folder-based decompiled output
-tasks.register('cleanDecompiledFolder') {
-    group = "necesse"
-    description = "Deletes external/necesse-src if present"
-    doLast {
-        if (decompiledOutDir.exists()) {
-            project.delete(decompiledOutDir)
-            println "Deleted ${decompiledOutDir}"
-        } else {
-            println "No external/necesse-src to delete"
-        }
-    }
 }

@@ -47,7 +47,5 @@ How it works:
 - Run and packaging tasks still point to the real game jars, so shipping is unaffected.
 
 Notes:
-- Decompiled sources are generated as a JAR in `build/necesse/` and auto‑attached by VS Code. No folder import is needed.
-- A legacy folder task, `decompileNecesse`, still exists if you want to browse files; you can remove it with:
-  - `./gradlew cleanDecompiledFolder` (deletes `external/necesse-src`), or manually `rm -rf external/necesse-src`.
+- Decompiled sources are generated as a JAR in `build/necesse/` and auto‑attached by VS Code. No folder output is used.
 - You can re‑run `./gradlew devSetup` whenever the game updates; it will refresh sources and sync `gameVersion` in `build.gradle`.
