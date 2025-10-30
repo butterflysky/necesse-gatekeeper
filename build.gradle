@@ -186,9 +186,11 @@ task runServer(type: JavaExec) {
     description = "Run server with current mod"
     dependsOn("buildModJar")
 
-    classpath = files(gameDirectory + "/Server.jar")
+    // Include Server.jar and its libs on the classpath
+    classpath = files(gameDirectory + "/Server.jar", fileTree(dir: gameDirectory + "/lib/"))
 
-    mainClass.set("StartServer")
+    // Main class is defined in Server.jar manifest as StartDesktopServer
+    mainClass.set("StartDesktopServer")
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-mod \"${buildLocation}\""]
 }
