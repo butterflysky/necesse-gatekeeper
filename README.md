@@ -1,51 +1,76 @@
 # GateKeeper
 
-A mod to enable access control for multiplayer servers.
+Access control for Necesse multiplayer servers: whitelist players by SteamID or by name, manage the list via server commands, and enforce at connection time.
 
-## Author
-butterflysky
+## Features
+- Per‑world whitelist stored next to the save (portable backups).
+- Accept by SteamID (recommended) or by username (case‑insensitive).
+- `/whitelist` server command for enable/disable/list/add/remove.
+- Immediate enforcement on connect; non‑whitelisted users are kicked with a clear message.
+- Admin notification in chat on denied connect attempts with cooldown to reduce spam.
 
-## Installation
-```bash
-gradle buildModJar
-```
+## Install & Build
+- Build mod JAR:
+  ```bash
+  ./gradlew buildModJar
+  ```
+- The JAR outputs to `build/jar/` and is used by `runClient`/`runServer` tasks.
 
-The mod will automatically copy to your Necesse mods folder.
-
-## Development
-
-```bash
-gradle runDevClient
-```
-
-### Dev Workflow: Auto‑attach Sources in VS Code
-
-This project includes a dev‑only flow to decompile the game jar with Vineflower, publish a local Maven artifact for the game with a matching `-sources.jar`, and have VS Code auto‑attach those sources for navigation.
-
-Prerequisites:
-- Game installed at `"/home/butterfly/.steam/steam/steamapps/common/Necesse"` (configured in `build.gradle:31`).
-- VS Code with the Java extensions (Red Hat Language Support, Debugger for Java).
-
-Key tasks:
-- `decompileNecesseSourcesJar`: Build `build/necesse/necesse-<gameVersion>-sources.jar` directly via Vineflower (`-file`).
-- `updateGameVersion`: Read `necesse/engine/GameInfo.java` from the sources JAR (fallback to legacy folder) and update `project.ext.gameVersion` in `build.gradle`.
-- `publishNecesseLocal`: Publish the game jar and sources jar to `mavenLocal()` as `local.necesse:necesse:<gameVersion>`.
-- `devSetup`: Convenience task to run the whole flow in order: decompile (JAR) → sync version → publish.
-
-Recommended flow:
-```bash
-# One‑shot setup (decompile, sync version, publish with sources)
-./gradlew devSetup
-
-# Reload VS Code Java project to pick up sources
-# Command Palette: "Java: Clean Java Language Server Workspace" or reload window
-```
-
-How it works:
-- Build logic uses `compileOnly` on the game jar; your mod jar never includes game classes.
-- If `local.necesse:necesse:<gameVersion>` exists in `~/.m2`, Gradle uses it (VS Code auto‑attaches the `-sources.jar`). Otherwise it falls back to the file path in the game directory.
-- Run and packaging tasks still point to the real game jars, so shipping is unaffected.
+## Server Commands
+- `/whitelist enable` — turn whitelist on.
+- `/whitelist disable` — turn whitelist off (allow all).
+- `/whitelist status` — show enabled state and counts.
+- `/whitelist list` — list SteamIDs and names.
+- `/whitelist add <auth|name>` — add a SteamID or name.
+- `/whitelist remove <auth|name>` — remove a SteamID or name.
+- Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>`.
+- Permissions: ADMIN and above.
 
 Notes:
-- Decompiled sources are generated as a JAR in `build/necesse/` and auto‑attached by VS Code. No folder output is used.
-- You can re‑run `./gradlew devSetup` whenever the game updates; it will refresh sources and sync `gameVersion` in `build.gradle`.
+- When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it stores the name for a one‑time allow.
+- On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
+
+## Config Location (Per‑World)
+- Directory world: `<worldDir>/GateKeeper/whitelist.txt`
+- Zip world: `<worldParent>/<worldName>.GateKeeper/whitelist.txt`
+
+Whitelist file format (text):
+```
+enabled=true
+auth:76561198000000000
+name:SomeFriend
+```
+
+## How It Works
+- The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.
+- GateKeeper listens to `ServerClientConnectedEvent` and immediately kicks if the connecting client is not whitelisted for the current world.
+- Admins/owners online receive a one‑per‑auth cooldown chat notification with a command hint to approve.
+
+Security/Integrity:
+- On Steam, `auth` is sourced from the Steam API (SteamID). For typical dedicated setups this is the correct identifier to trust.
+- Name entries are provided for convenience; prefer SteamID for durability.
+
+## Hosting Notes (Shockbyte, etc.)
+- Because the config lives alongside the world, moving or backing up the world keeps the whitelist.
+- You can also edit `whitelist.txt` directly from the host panel file manager.
+
+## Development
+- Run dev client:
+  ```bash
+  ./gradlew runDevClient
+  ```
+
+### Dev Workflow: Auto‑attach Game Sources in VS Code
+- One‑shot setup:
+  ```bash
+  ./gradlew devSetup
+  ```
+- This decompiles Necesse with Vineflower into a `-sources.jar`, publishes the game + sources to `mavenLocal`, and VS Code auto‑attaches sources for navigation.
+- Rebuild sources any time:
+  ```bash
+  ./gradlew decompileNecesseSourcesJar publishNecessePublicationToMavenLocal
+  ```
+
+Troubleshooting:
+- If VS Code doesn’t jump to sources, run “Java: Clean Java Language Server Workspace” and reopen the project.
+- Ensure the game path in `build.gradle` (`gameDirectory`) matches your install.
