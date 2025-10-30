@@ -1,44 +1,47 @@
 package gatekeeper;
 
+import gatekeeper.core.WhitelistCommand;
+import gatekeeper.core.WhitelistManager;
+import gatekeeper.core.events.WhitelistConnectionListener;
+import necesse.engine.GameEvents;
+import necesse.engine.commands.CommandsManager;
 import necesse.engine.modLoader.annotations.ModEntry;
-import necesse.engine.registries.ItemRegistry;
-import necesse.inventory.recipe.Ingredient;
-import necesse.inventory.recipe.Recipe;
-import necesse.inventory.recipe.Recipes;
-import necesse.engine.registries.RecipeTechRegistry;
-import gatekeeper.items.ExampleSword;
 
 @ModEntry
 public class GatekeeperMod {
-    
-    // Called first - register content (items, mobs, tiles, etc.)
+
+    public static final String MOD_ID = "gatekeeper";
+    public static final String MOD_NAME = "GateKeeper";
+
+    private static WhitelistManager whitelistManager;
+
+    // Called first - register content and commands
     public void init() {
-        System.out.println("GateKeeper is loading...");
-        
-  // Register items (modern API)
-  ItemRegistry.registerItem("examplesword", new ExampleSword());
-        
-        System.out.println("GateKeeper loaded successfully!");
+        System.out.println(MOD_NAME + " is loading...");
+
+        // Initialize whitelist manager (loads config from app data)
+        whitelistManager = new WhitelistManager();
+        whitelistManager.load();
+
+        // Register server command: /whitelist
+        CommandsManager.registerServerCommand(new WhitelistCommand(whitelistManager));
+
+        // Register connection listener
+        GameEvents.addListener(necesse.engine.events.ServerClientConnectedEvent.class,
+                new WhitelistConnectionListener(whitelistManager));
+
+        System.out.println(MOD_NAME + " loaded successfully!");
     }
-    
+
     // Called second - load resources (images, sounds, etc...)
     public void initResources() {
-
     }
-    
+
     // Called last - everything is loaded, safe to reference any content
     public void postInit() {
+    }
 
-        // Add crafting recipe
-        Recipes.registerModRecipe(new Recipe(
-            "examplesword",                      
-            1,                                
-            RecipeTechRegistry.IRON_ANVIL,   
-            new Ingredient[]{                 
-                new Ingredient("ironbar", 5),    
-                new Ingredient("anystone", 10)    
-            }
-        ));
-        System.out.println("GateKeeper post-initialization complete!");
+    public static WhitelistManager getWhitelistManager() {
+        return whitelistManager;
     }
 }
