@@ -317,6 +317,11 @@ tasks.register('updateGameVersion') { t ->
         def ver = m.group(1)
         def gradleFile = file('build.gradle')
         def gtxt = gradleFile.getText('UTF-8')
+        // If already up-to-date, exit gracefully
+        if (gtxt.contains("project.ext.gameVersion = \"${ver}\"")) {
+            println "project.ext.gameVersion already ${ver}"
+            return
+        }
         def replaced = gtxt.replaceAll(/(project\.ext\.gameVersion\s*=\s*\")[^\"]+(\"\s*)/, "${'$'}1${ver}${'$'}2")
         if (gtxt == replaced) throw new GradleException("Did not update build.gradle; pattern not found")
         gradleFile.write(replaced, 'UTF-8')
