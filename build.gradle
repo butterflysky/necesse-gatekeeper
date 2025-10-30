@@ -234,8 +234,9 @@ tasks.register('decompileNecesseSourcesJar', Exec) { t ->
         def vfJar = configurations.vineflower.singleFile
         def outJar = sourcesJarProvider.get()
         commandLine = [ 'java', '-jar', vfJar.absolutePath,
+            '--file',
             file(gameDirectory + "/Necesse.jar").absolutePath,
-            '-file', outJar.absolutePath ]
+            outJar.absolutePath ]
     }
 }
 
