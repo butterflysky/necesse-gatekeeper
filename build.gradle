@@ -256,10 +256,13 @@ tasks.register('packNecesseSources', Jar) { t ->
     description = "Packs external/necesse-src into a -sources.jar"
     dependsOn('decompileNecesse')
     archiveBaseName.set('necesse')
-    archiveVersion.set(project.ext.gameVersion)
     archiveClassifier.set('sources')
     destinationDirectory.set(sourcesOutDir)
     from(decompiledOutDir)
+    doFirst {
+        // Ensure the version is current in case updateGameVersion ran earlier in this build
+        archiveVersion.set(project.ext.gameVersion)
+    }
 }
 
 publishing {
@@ -291,6 +294,13 @@ tasks.register('publishNecesseLocal') { t ->
     dependsOn('packNecesseSources', 'publishNecessePublicationToMavenLocal')
 }
 
+// Ensure publication version matches the latest updated value at execution time
+tasks.named('publishNecessePublicationToMavenLocal') {
+    doFirst {
+        publishing.publications.necesse.version = project.ext.gameVersion
+    }
+}
+
 // ----------------------------------------------------------------------------
 // Update project.ext.gameVersion from decompiled GameInfo.java
 // ----------------------------------------------------------------------------
@@ -312,4 +322,14 @@ tasks.register('updateGameVersion') { t ->
         gradleFile.write(replaced, 'UTF-8')
         println "Updated project.ext.gameVersion to ${ver}"
     }
+}
+
+// ----------------------------------------------------------------------------
+// Dev setup convenience task
+// ----------------------------------------------------------------------------
+tasks.register('devSetup') {
+    group = "necesse"
+    description = "Decompile, sync gameVersion, pack sources, and publish to mavenLocal"
+    dependsOn('decompileNecesse', 'updateGameVersion')
+    finalizedBy('packNecesseSources', 'publishNecessePublicationToMavenLocal')
 }
