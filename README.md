@@ -33,6 +33,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - `/whitelist enable` — turn whitelist on.
 - `/whitelist disable` — turn whitelist off (allow all).
 - `/whitelist status` — show enabled state and counts.
+- `/whitelist reload` — reload config from disk; if parse fails, keeps current settings and renames the broken file.
 - `/whitelist list` — list whitelisted SteamIDs (shows last‑known names when available).
 - `/whitelist lockdown [on|off|status]` — emergency mode; only whitelisted players can join; suppresses notifications.
 - `/whitelist online` — list current connected players with SteamIDs.
