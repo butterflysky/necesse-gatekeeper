@@ -1,40 +1,32 @@
-<p>
+<p align="center">
   <img src="src/main/resources/preview.png" alt="GateKeeper preview" width="256" />
 </p>
 
-<h1>GateKeeper</h1>
+<h1 align="center">GateKeeper</h1>
 
-Access control for Necesse multiplayer servers: whitelist players by SteamID or by name, manage the list via server commands, and enforce at connection time.
+Server whitelist and access control for Necesse dedicated servers.
+
+Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 
 ## Features
-- Per‑world whitelist stored next to the save (portable backups).
-- Auth‑only access (SteamID). Names can be used to resolve to a SteamID if the player is online or has previously played on the world.
-- `/whitelist` server command for enable/disable/list/add/remove.
-- Immediate enforcement on connect; non‑whitelisted users are kicked with a clear message.
-- Admin notification in chat on denied connect attempts with cooldown to reduce spam.
- - Admins/owners bypass whitelist and are auto‑added on first join; a brief reminder is shown on login.
+- Per‑world whitelist next to the world save (portable backups)
+- Auth‑only (SteamID64) access; names never grant access
+- Admin/owner quality of life:
+  - Admins/owners bypass whitelist and are auto‑added on first join
+  - One‑line join reminder: “Whitelist is ENABLED|DISABLED. Use /whitelist help”
+- Clear server commands to manage the list
+- Immediate enforcement on connect + friendly kick reason
+- Denied‑attempt notifications with cool‑down; audit logs on disk
 
-## Install & Build
-- Build mod JAR:
-  ```bash
-  ./gradlew buildModJar
-  ```
-- The JAR outputs to `build/jar/` and is used by `runClient`/`runServer` tasks.
+## Quick Start (Server Owners)
+1) Subscribe on Steam Workshop, start the server.
+2) In‑game or server console:
+   - Enable: `/whitelist enable`
+   - Recommended onboarding: have a new player connect once, then `/whitelist approve-last`
+   - Lockdown during incidents: `/whitelist lockdown on` (only whitelisted can join)
+3) Admins/owners can always join and are auto‑added to the whitelist on first join.
 
-### Workshop Preview Image
-- The repository includes a vector preview at `resources/preview.svg` (1024x1024 design).
-- Export a PNG named `preview.png` into `src/main/resources/` (Steam Workshop commonly accepts 512–1024 square):
-  - With Inkscape:
-    ```bash
-    inkscape resources/preview.svg --export-type=png --export-filename=src/main/resources/preview.png --export-width=1024 --export-height=1024
-    ```
-  - With rsvg-convert (librsvg):
-    ```bash
-    rsvg-convert -w 1024 -h 1024 resources/preview.svg > src/main/resources/preview.png
-    ```
-- You can tweak the title/subtitle text directly in the SVG.
-
-## Server Commands
+## Commands (Admin)
 
 | Command | Description |
 |---|---|
@@ -55,17 +47,16 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>` — Permissions: ADMIN and above.
 
 Notes:
-- When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it asks you to have the player connect once or provide their SteamID. Names are not stored for access.
+- Adding by name only works if the player is online or has played on this world before; names are never stored for access.
 - On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
-- Denied attempts are logged to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
-- Autocomplete/typeahead for `/whitelist` may not appear on clients that don’t have the mod installed, but the command still works because it’s parsed on the server. Use `/whitelist help` to see usage.
- - Admins and owners can always join even if not whitelisted; on first join they are auto‑added to the whitelist, and receive a reminder: “Whitelist is ENABLED|DISABLED. Use /whitelist help”.
+- Autocomplete/typeahead may not appear on clients without the mod; `/whitelist` still works because the server parses it.
+- Admins/owners can always join even if not whitelisted; on first join they are auto‑added and see a reminder.
 
-## Config Location (Per‑World)
+## Configuration (Per‑World)
 - Directory world: `<worldDir>/GateKeeper/whitelist.json`
 - Zip world: `<worldParent>/<worldName>.GateKeeper/whitelist.json`
 
-Whitelist file format (JSON):
+Example `whitelist.json`:
 ```
 {
   "enabled": true,
@@ -77,50 +68,27 @@ Whitelist file format (JSON):
   ]
 }
 ```
-Notes:
+Tips:
 - `auth` is an array of SteamIDs (longs). Order is not significant.
-- If you edit `whitelist.json` manually while the server is running, use `/whitelist reload` to apply changes. If the file is invalid JSON, GateKeeper keeps the current settings and renames the broken file for review.
+- If you edit `whitelist.json` while the server is running, use `/whitelist reload`. On invalid JSON, the server keeps the current settings and backs up the broken file.
 
 ## How It Works
-- The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.
-- GateKeeper listens to `ServerClientConnectedEvent` and enforces access:
-  - If whitelist is disabled: allow all.
-  - If enabled: allow if SteamID is whitelisted, or if the player is ADMIN/OWNER (admins/owners are also auto‑added).
-  - Otherwise: record a denied attempt and disconnect with a friendly reason.
-- Admins/owners online receive a one‑per‑auth cooldown chat notification with a command hint to approve.
+- On connect, the server receives the client’s SteamID64 (auth) and fires a connect event.
+- GateKeeper enforces access:
+  - Whitelist disabled: allow all
+  - Whitelist enabled: allow whitelisted users or ADMIN/OWNER (privileged users are auto‑added)
+  - Otherwise: record a denied attempt and kick with a friendly reason
+- Denied attempts are written to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
 
 Security/Integrity:
-- On Steam, `auth` is sourced from the Steam API (SteamID). For typical dedicated setups this is the correct identifier to trust.
-- Name entries are provided for convenience; prefer SteamID for durability.
+- On Steam, `auth` is sourced from Steam and is the correct identifier to trust.
+- Names are convenience only; prefer SteamID for durability.
 
-## Hosting Notes (Shockbyte, etc.)
-- Because the config lives alongside the world, moving or backing up the world keeps the whitelist.
-- You can also edit `whitelist.json` directly from the host panel file manager.
+## Issues & Support
+- GitHub: https://github.com/butterflysky/necesse-gatekeeper
+- Include server logs and your `GateKeeper/` files when reporting issues.
 
-## Development
-- Run dev client:
-  ```bash
-  ./gradlew runDevClient
-  ```
+---
 
-### Javadocs
-- Generate API docs from source Javadocs:
-  ```bash
-  ./gradlew javadoc
-  ```
-- Output: `build/docs/javadoc/index.html`
-
-### Dev Workflow: Auto‑attach Game Sources in VS Code
-- One‑shot setup:
-  ```bash
-  ./gradlew devSetup
-  ```
-- This decompiles Necesse with Vineflower into a `-sources.jar`, publishes the game + sources to `mavenLocal`, and VS Code auto‑attaches sources for navigation.
-- Rebuild sources any time:
-  ```bash
-  ./gradlew decompileNecesseSourcesJar publishNecessePublicationToMavenLocal
-  ```
-
-Troubleshooting:
-- If VS Code doesn’t jump to sources, run “Java: Clean Java Language Server Workspace” and reopen the project.
-- Ensure the game path in `build.gradle` (`gameDirectory`) matches your install.
+## For Mod Developers
+Development, build, and source‑navigation instructions have moved to CONTRIBUTING.md.
