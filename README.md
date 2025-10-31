@@ -79,7 +79,7 @@ Security/Integrity:
 
 ## Hosting Notes (Shockbyte, etc.)
 - Because the config lives alongside the world, moving or backing up the world keeps the whitelist.
-- You can also edit `whitelist.txt` directly from the host panel file manager.
+- You can also edit `whitelist.json` directly from the host panel file manager.
 
 ## Development
 - Run dev client:

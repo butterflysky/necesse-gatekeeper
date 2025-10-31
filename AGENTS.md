@@ -27,11 +27,11 @@ This document prepares future AI agents and contributors to work on this codebas
   - Zip world: `<parent>/<worldName>.GateKeeper/`.
 
 ## Whitelist Design (Authoritative)
-- Access is auth-only (SteamID64). Names are never stored for access or persisted in `whitelist.txt`.
-- `whitelist.txt` format (auth-only):
-  - `enabled=true|false`
-  - `lockdown=true|false`
-  - `auth:<id64>` (one per line)
+- Access is auth-only (SteamID64). Names are never stored for access or persisted in `whitelist.json`.
+- `whitelist.json` format (auth-only):
+  - `enabled`: boolean
+  - `lockdown`: boolean
+  - `auth`: array of SteamID64 longs
 - Default: disabled. Admin must enable via `/whitelist enable` or config.
 - Features:
   - Lockdown mode: only whitelisted connects allowed; notifications suppressed.
@@ -92,4 +92,3 @@ This document prepares future AI agents and contributors to work on this codebas
 3. Enforce on connect in listener when relevant (rate-limit + logs).
 4. Add unit tests for pure logic. Avoid final-field hacks; test behavior at boundaries you control.
 5. Build and run tests: `./gradlew test` and `./gradlew buildModJar`.
-
