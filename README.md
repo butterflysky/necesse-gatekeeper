@@ -16,6 +16,19 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
   ```
 - The JAR outputs to `build/jar/` and is used by `runClient`/`runServer` tasks.
 
+### Workshop Preview Image
+- The repository includes a vector preview at `resources/preview.svg` (1024x1024 design).
+- Export a PNG named `preview.png` (Steam Workshop commonly accepts 512–1024 square):
+  - With Inkscape:
+    ```bash
+    inkscape resources/preview.svg --export-type=png --export-filename=resources/preview.png --export-width=1024 --export-height=1024
+    ```
+  - With rsvg-convert (librsvg):
+    ```bash
+    rsvg-convert -w 1024 -h 1024 resources/preview.svg > resources/preview.png
+    ```
+- You can tweak the title/subtitle text directly in the SVG.
+
 ## Server Commands
 - `/whitelist enable` — turn whitelist on.
 - `/whitelist disable` — turn whitelist off (allow all).
