@@ -53,6 +53,9 @@ public class WhitelistCommand extends ModularChatCommand {
         String[] parts = rest.split("\\s+");
         String sub = parts[0].toLowerCase(Locale.ENGLISH);
         switch (sub) {
+            case "help":
+                printHelp(logs);
+                break;
             case "enable":
                 manager.setEnabled(server, true);
                 logs.add("GateKeeper whitelist enabled");
