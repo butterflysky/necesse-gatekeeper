@@ -147,11 +147,11 @@ task createModInfoFile(type: JavaExec) {
 
     classpath = files(gameDirectory + "/Necesse.jar")
   doFirst {
-    sourceSets.main.java.destinationDirectory.get().asFile.mkdirs()
+    new File(modOutputDir, "classes").mkdirs()
   }
 
   mainClass.set("CreateModInfoFile")
-    args = ["-file", "${sourceSets.main.java.destinationDirectory.get()}/mod.info",
+    args = ["-file", "${modOutputDir}/classes/mod.info",
             "-id", "${project.ext.modID}",
             "-name", "${project.ext.modName}",
             "-version", "${project.ext.modVersion}",
@@ -208,11 +208,7 @@ task buildModJar(type: Jar) {
     description = "Generates the mod jar into the build folder"
     dependsOn("classes")
 
-    doFirst {
-        fileTree(dir: buildLocation).exclude("${jarName}.jar").visit { FileVisitDetails details ->
-            delete details.file
-        }
-    }
+    // No runtime cleanup to keep configuration cache compatible
 
   // Add compiled classes and generated resources
   from sourceSets.main.java.destinationDirectory.get()
@@ -225,6 +221,7 @@ task buildModJar(type: Jar) {
 
     archiveFileName.set("${jarName}.jar")
     destinationDirectory.set(file(buildLocation))
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // ----------------------------------------------------------------------------
@@ -355,4 +352,9 @@ tasks.withType(Test).configureEach {
         exceptionFormat "short"
         showStandardStreams = false
     }
+}
+
+// Make assembling the project produce the mod jar artifact
+tasks.named('assemble') {
+    dependsOn('buildModJar')
 }
