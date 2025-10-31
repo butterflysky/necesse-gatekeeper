@@ -21,6 +21,11 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - `/whitelist disable` — turn whitelist off (allow all).
 - `/whitelist status` — show enabled state and counts.
 - `/whitelist list` — list SteamIDs and names.
+- `/whitelist lockdown [on|off|status]` — emergency mode; only whitelisted players can join; suppresses notifications.
+- `/whitelist online` — list current connected players with SteamIDs.
+- `/whitelist recent` — show last denied attempts (index, name, SteamID, age, address).
+- `/whitelist recent approve <index>` — approve one of the recent denied attempts.
+- `/whitelist approve-last` — approve the most recent denied attempt.
 - `/whitelist add <auth|name>` — add a SteamID or name.
 - `/whitelist remove <auth|name>` — remove a SteamID or name.
 - Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>`.
@@ -29,6 +34,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 Notes:
 - When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it stores the name for a one‑time allow.
 - On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
+- Denied attempts are logged to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
 
 ## Config Location (Per‑World)
 - Directory world: `<worldDir>/GateKeeper/whitelist.txt`

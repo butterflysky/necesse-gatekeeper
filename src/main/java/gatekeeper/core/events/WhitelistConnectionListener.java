@@ -36,10 +36,14 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         if (!manager.isEnabled()) return;
         if (manager.isWhitelisted(server, auth, name)) return;
 
-        // Notify admins/owners with rate limit
-        if (manager.shouldNotify(auth, NOTIFY_COOLDOWN_MS)) {
+        // Record attempt (for recent + log)
+        String address = c.networkInfo == null ? null : c.networkInfo.getDisplayName();
+        manager.recordDeniedAttempt(server, auth, name, address);
+
+        // Notify admins/owners with rate limit unless in lockdown
+        if (!manager.isLockdown() && manager.shouldNotify(auth, NOTIFY_COOLDOWN_MS)) {
             String msg = "[GateKeeper] Non-whitelisted connect: " + name + " (" + auth + ")" +
-                    " — approve with /whitelist approve " + auth + " or add by name.";
+                    " — approve with /whitelist approve " + auth + " or /whitelist approve-last";
             for (int i = 0; i < server.getSlots(); i++) {
                 ServerClient admin = server.getClient(i);
                 if (admin != null && admin.getPermissionLevel().getLevel() >= necesse.engine.commands.PermissionLevel.ADMIN.getLevel()) {
@@ -50,7 +54,9 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         }
 
         // Disconnect with friendly message
-        String reason = "Not whitelisted. Ask an admin to run /whitelist approve " + auth + ".";
+        String reason = manager.isLockdown()
+                ? "Server is in lockdown. Please contact an admin."
+                : ("Not whitelisted. Ask an admin to run /whitelist approve " + auth + ".");
         server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, reason));
     }
 

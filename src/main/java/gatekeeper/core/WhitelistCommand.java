@@ -58,6 +58,65 @@ public class WhitelistCommand extends ModularChatCommand {
                 names.sort(Comparator.naturalOrder());
                 logs.add("Names (" + names.size() + "): " + names);
                 break;
+            case "lockdown":
+                if (parts.length == 1 || parts[1].equalsIgnoreCase("status")) {
+                    logs.add("Lockdown is " + (manager.isLockdown() ? "ON" : "OFF"));
+                } else if (parts[1].equalsIgnoreCase("on")) {
+                    manager.setLockdown(server, true);
+                    logs.add("Lockdown enabled: only whitelisted players can join; notifications suppressed.");
+                } else if (parts[1].equalsIgnoreCase("off")) {
+                    manager.setLockdown(server, false);
+                    logs.add("Lockdown disabled.");
+                } else {
+                    logs.add("Usage: /whitelist lockdown [on|off|status]");
+                }
+                break;
+            case "online":
+                for (int i = 0; i < server.getSlots(); i++) {
+                    ServerClient c = server.getClient(i);
+                    if (c != null) {
+                        logs.add("#" + (i + 1) + ": " + c.getName() + " (" + c.authentication + ") perm=" + c.getPermissionLevel());
+                    }
+                }
+                break;
+            case "recent":
+                if (parts.length >= 3 && parts[1].equalsIgnoreCase("approve")) {
+                    try {
+                        int idx = Integer.parseInt(parts[2]);
+                        java.util.List<gatekeeper.core.WhitelistManager.Attempt> list = manager.getRecentAttempts();
+                        if (idx < 1 || idx > list.size()) { logs.add("Index out of range"); break; }
+                        long authIdx = list.get(idx - 1).auth;
+                        boolean addedIdx = manager.addAuth(server, authIdx);
+                        logs.add((addedIdx ? "Approved" : "Already whitelisted") + " auth: " + authIdx);
+                        break;
+                    } catch (NumberFormatException ex) {
+                        logs.add("Usage: /whitelist recent approve <index>");
+                        break;
+                    }
+                }
+                java.util.List<gatekeeper.core.WhitelistManager.Attempt> list = manager.getRecentAttempts();
+                if (list.isEmpty()) { logs.add("No recent denied attempts."); break; }
+                int shown = 0;
+                int start = Math.max(0, list.size() - 10);
+                for (int i = start; i < list.size(); i++) {
+                    gatekeeper.core.WhitelistManager.Attempt a = list.get(i);
+                    long ageSec = (System.currentTimeMillis() - a.timeMs) / 1000;
+                    logs.add((i + 1) + ". " + (a.name == null ? "<unknown>" : a.name) + " (" + a.auth + ") " + ageSec + "s ago " + (a.address == null ? "" : ("[" + a.address + "]")));
+                    shown++;
+                }
+                logs.add("Shown " + shown + "/" + list.size() + ". Use '/whitelist recent approve <index>' to approve.");
+                break;
+            case "approve-last":
+                Long last = manager.getLastDeniedAuth();
+                if (last == null) { logs.add("No recent denied attempts."); break; }
+                boolean addedLast = manager.addAuth(server, last);
+                logs.add((addedLast ? "Approved" : "Already whitelisted") + " last auth: " + last);
+                break;
+            case "export":
+                int count = manager.exportKnownPlayers(server);
+                java.io.File dir = manager.getConfigDir(server);
+                logs.add("Exported " + count + " known players to " + new java.io.File(dir, "known_players.txt").getPath());
+                break;
             case "add":
             case "approve":
                 if (parts.length < 2) { logs.add("Usage: /whitelist add <auth|name>"); break; }
@@ -103,11 +162,11 @@ public class WhitelistCommand extends ModularChatCommand {
     }
 
     private void printHelp(CommandLog logs) {
-        logs.add("/whitelist enable|disable|status");
-        logs.add("/whitelist list");
+        logs.add("/whitelist enable|disable|status|lockdown [on|off|status]");
+        logs.add("/whitelist list|online|recent|approve-last|export");
         logs.add("/whitelist add <auth|name>");
         logs.add("/whitelist remove <auth|name>");
-        logs.add("/whitelist approve <auth|name>");
-        logs.add("/whitelist deny <auth|name>");
+        logs.add("/whitelist approve <auth|name> | deny <auth|name>");
+        logs.add("/whitelist recent approve <index>");
     }
 }
