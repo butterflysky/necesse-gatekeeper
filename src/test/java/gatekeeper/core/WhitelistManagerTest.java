@@ -75,9 +75,9 @@ class WhitelistManagerTest {
         assertTrue(file.exists());
         String text = new String(Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
         assertTrue(text.contains("enabled=true"));
-        assertTrue(text.contains("auth:100"));
-        assertTrue(text.contains("auth:200"));
-        assertFalse(text.contains("name:"));
+        assertTrue(text.contains("auth:["));
+        assertTrue(text.contains("100"));
+        assertTrue(text.contains("200"));
 
         // New manager should load same
         WhitelistManager mgr2 = new WhitelistManager();

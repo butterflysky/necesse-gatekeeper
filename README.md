@@ -57,12 +57,10 @@ Whitelist file format (text):
 ```
 enabled=true
 lockdown=false
-auth:76561198000000000
-auth:76561198000000001
-auth:76561198000000002
+auth:[76561198000000000, 76561198000000001, 76561198000000002]
 ```
 Notes:
-- Add one `auth:` line per SteamID.
+- `auth` uses a simple list syntax with comma‑separated SteamIDs.
 - Order is not significant.
 
 ## How It Works

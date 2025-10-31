@@ -107,8 +107,21 @@ public class WhitelistManager {
                 if (idx > 0) {
                     String key = line.substring(0, idx).trim().toLowerCase(Locale.ENGLISH);
                     String val = line.substring(idx + 1).trim();
-                    if (key.equals("auth")) {
-                        try { authIds.add(Long.parseLong(val)); } catch (Exception ignore) {}
+                    if (key.equals("auth") || key.equals("auths")) {
+                        // Support list format: auth:[id1, id2, ...] or single: auth:123
+                        if (val.startsWith("[") && val.endsWith("]")) {
+                            String inner = val.substring(1, val.length() - 1);
+                            if (!inner.trim().isEmpty()) {
+                                for (String tok : inner.split(",")) {
+                                    String t = tok.trim();
+                                    if (!t.isEmpty()) {
+                                        try { authIds.add(Long.parseLong(t)); } catch (Exception ignore) {}
+                                    }
+                                }
+                            }
+                        } else {
+                            try { authIds.add(Long.parseLong(val)); } catch (Exception ignore) {}
+                        }
                     }
                 }
             }
@@ -125,10 +138,11 @@ public class WhitelistManager {
             bw.write("# GateKeeper whitelist\n");
             bw.write("enabled=" + enabled + "\n");
             bw.write("lockdown=" + lockdown + "\n");
-            for (Long a : authIds) {
-                bw.write("auth:" + a + "\n");
-            }
-            // do not persist legacy name entries anymore; file will be auth-only
+            // Write list format for compactness and clarity
+            List<Long> ids = new ArrayList<>(authIds);
+            java.util.Collections.sort(ids);
+            String joined = ids.isEmpty() ? "" : ids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
+            bw.write("auth:[" + joined + "]\n");
         } catch (IOException e) {
             e.printStackTrace();
         }
