@@ -164,7 +164,8 @@ task runClient(type: JavaExec) {
     dependsOn("buildModJar")
 
     classpath = files(gameDirectory + "/Necesse.jar")
-    workingDir = file(gameDirectory)
+    // Ensure Steam initializes in a consistent way without needing a file in CWD
+    environment "SteamAppId", "1169040"
     // No Steam App ID needed for build/tests; local client runs work without it in most cases
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
@@ -177,7 +178,7 @@ task runDevClient(type: JavaExec) {
     dependsOn("buildModJar")
 
     classpath = files(gameDirectory + "/Necesse.jar")
-    workingDir = file(gameDirectory)
+    environment "SteamAppId", "1169040"
     // No Steam App ID needed for build/tests; local client runs work without it in most cases
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
