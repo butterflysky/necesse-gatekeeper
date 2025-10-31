@@ -23,7 +23,7 @@ Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 2) In‑game or server console:
    - Enable: `/whitelist enable`
    - Recommended onboarding: have a new player connect once, then `/whitelist approve-last`
-   - Lockdown during incidents: `/whitelist lockdown on` (only whitelisted can join)
+   - Lockdown during incidents: `/whitelist lockdown on` (suppresses admin notifications for denied connects and shows a “server is in lockdown” message to rejected clients; whitelist enforcement itself is unchanged)
 3) Admins/owners can always join and are auto‑added to the whitelist on first join.
 
 ## Commands (Admin)
@@ -35,16 +35,14 @@ Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 | `/whitelist enable` | Turn whitelist on. |
 | `/whitelist disable` | Turn whitelist off (allow all). |
 | `/whitelist reload` | Reload config from disk; on parse error, keep current settings and rename the broken file. |
-| `/whitelist lockdown [on|off|status]` | Emergency mode; only whitelisted may join; suppress notifications. |
+| `/whitelist lockdown [on|off|status]` | Emergency mode: suppress admin notifications for denied connects and change the kick reason to “server is in lockdown”. Whitelist enforcement is unchanged. |
 | `/whitelist list` | List whitelisted SteamIDs (shows last‑known names when available). |
 | `/whitelist online` | List currently connected players with SteamIDs. |
 | `/whitelist recent` | Show last denied attempts (index, name, SteamID, age, address). |
 | `/whitelist recent approve <index>` | Approve one of the recent denied attempts. |
 | `/whitelist approve-last` | Approve the most recent denied attempt. |
-| `/whitelist add <auth|name>` | Add a SteamID or resolve a known name to SteamID and add. |
-| `/whitelist remove <auth|name>` | Remove a SteamID or resolve a known name and remove. |
-
-Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>` — Permissions: ADMIN and above.
+| `/whitelist add <SteamID or player name>` | Add a SteamID or resolve a known name to SteamID and add. |
+| `/whitelist remove <SteamID or player name>` | Remove a SteamID or resolve a known name and remove. |
 
 Notes:
 - Adding by name only works if the player is online or has played on this world before; names are never stored for access.

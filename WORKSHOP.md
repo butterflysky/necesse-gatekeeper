@@ -21,7 +21,7 @@ GateKeeper adds an auth‑only (SteamID64) whitelist to Necesse dedicated server
 
 ## Key Features
 - Auth‑only whitelist with per‑world config next to your save
-- Lockdown mode for emergencies (allow only whitelisted; suppress notifications)
+- Lockdown mode for emergencies (suppresses admin notifications for denied connects and shows a clear “server is in lockdown” reason to rejected clients; whitelist enforcement is unchanged)
 - Admin anti‑noise (rate‑limited connect notices)
 - Recent denied attempts view + one‑command approval
 - Audit logs for denied connects and admin kicks
