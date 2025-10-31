@@ -36,7 +36,6 @@ public class WhitelistManager {
     private long currentWorldId = Long.MIN_VALUE;
 
     private final Set<Long> authIds = new HashSet<>();
-    private final Set<String> namesLower = new HashSet<>(); // legacy entries; not used for allow
     private boolean enabled = false;
     private boolean lockdown = false;
 
@@ -89,7 +88,6 @@ public class WhitelistManager {
     /** Load whitelist.txt from disk into memory (create if missing). */
     private synchronized void loadInternal() {
         authIds.clear();
-        namesLower.clear();
         enabled = false;
         if (configDir == null || configFile == null) return;
         if (!configDir.exists()) configDir.mkdirs();
@@ -112,8 +110,6 @@ public class WhitelistManager {
                     String val = line.substring(idx + 1).trim();
                     if (key.equals("auth")) {
                         try { authIds.add(Long.parseLong(val)); } catch (Exception ignore) {}
-                    } else if (key.equals("name")) { // legacy; retained for readability
-                        namesLower.add(val.toLowerCase(Locale.ENGLISH));
                     }
                 }
             }
@@ -133,8 +129,7 @@ public class WhitelistManager {
             for (Long a : authIds) {
                 bw.write("auth:" + a + "\n");
             }
-            // legacy names retained for human readability; not used for allow decision
-            for (String n : namesLower) { bw.write("name:" + n + "\n"); }
+            // do not persist legacy name entries anymore; file will be auth-only
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -157,29 +152,8 @@ public class WhitelistManager {
     public synchronized boolean addAuth(Server server, long auth) { ensureWorld(server); boolean added = authIds.add(auth); if (added) saveInternal(); return added; }
     /** Remove a SteamID from the whitelist. @return true if it was present. */
     public synchronized boolean removeAuth(Server server, long auth) { ensureWorld(server); boolean rem = authIds.remove(auth); if (rem) saveInternal(); return rem; }
-    /**
-     * Legacy helper to keep a name line in the file for readability; does not grant access.
-     */
-    public synchronized boolean addName(Server server, String name) {
-        ensureWorld(server);
-        if (name == null) return false;
-        boolean added = namesLower.add(name.toLowerCase(Locale.ENGLISH));
-        if (added) saveInternal();
-        return added;
-    }
-    /** Remove a legacy stored name line; does not affect access. */
-    public synchronized boolean removeName(Server server, String name) {
-        ensureWorld(server);
-        if (name == null) return false;
-        boolean rem = namesLower.remove(name.toLowerCase(Locale.ENGLISH));
-        if (rem) saveInternal();
-        return rem;
-    }
-
     /** @return snapshot of all whitelisted SteamIDs for the current world. */
     public synchronized List<Long> listAuths(Server server) { ensureWorld(server); return new ArrayList<>(authIds); }
-    /** @return snapshot of legacy stored names (for file readability only). */
-    public synchronized List<String> listNames(Server server) { ensureWorld(server); return new ArrayList<>(namesLower); }
 
     /**
      * Resolve a player name to SteamID using online clients and saved players for this world.

@@ -64,7 +64,7 @@ public class WhitelistCommand extends ModularChatCommand {
                 break;
             case "status":
                 logs.add("Whitelist is " + (manager.isEnabled() ? "ENABLED" : "DISABLED"));
-                logs.add("Auth IDs: " + manager.listAuths(server).size() + ", Names: " + manager.listNames(server).size());
+                logs.add("Auth IDs: " + manager.listAuths(server).size());
                 break;
             case "list":
                 List<Long> auths = manager.listAuths(server);

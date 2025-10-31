@@ -4,7 +4,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 
 ## Features
 - Per‑world whitelist stored next to the save (portable backups).
-- Accept by SteamID (recommended) or by username (case‑insensitive).
+- Auth‑only access (SteamID). Names can be used to resolve to a SteamID if the player is online or has previously played on the world.
 - `/whitelist` server command for enable/disable/list/add/remove.
 - Immediate enforcement on connect; non‑whitelisted users are kicked with a clear message.
 - Admin notification in chat on denied connect attempts with cooldown to reduce spam.
@@ -20,7 +20,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - `/whitelist enable` — turn whitelist on.
 - `/whitelist disable` — turn whitelist off (allow all).
 - `/whitelist status` — show enabled state and counts.
-- `/whitelist list` — list SteamIDs and names.
+- `/whitelist list` — list whitelisted SteamIDs (shows last‑known names when available).
 - `/whitelist lockdown [on|off|status]` — emergency mode; only whitelisted players can join; suppresses notifications.
 - `/whitelist online` — list current connected players with SteamIDs.
 - `/whitelist recent` — show last denied attempts (index, name, SteamID, age, address).
