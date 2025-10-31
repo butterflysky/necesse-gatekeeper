@@ -37,7 +37,7 @@ public class WhitelistManager {
 
     private final Set<Long> authIds = new HashSet<>();
     private final Set<String> namesLower = new HashSet<>(); // legacy entries; not used for allow
-    private boolean enabled = true;
+    private boolean enabled = false;
     private boolean lockdown = false;
 
     // in-memory rate limit for notifications (auth -> lastMillis)
@@ -90,7 +90,7 @@ public class WhitelistManager {
     private synchronized void loadInternal() {
         authIds.clear();
         namesLower.clear();
-        enabled = true;
+        enabled = false;
         if (configDir == null || configFile == null) return;
         if (!configDir.exists()) configDir.mkdirs();
         if (!configFile.exists()) {
