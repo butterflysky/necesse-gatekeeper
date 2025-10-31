@@ -27,7 +27,9 @@ GateKeeper adds an auth‑only (SteamID64) whitelist to Necesse dedicated server
 - Audit logs for denied connects and admin kicks
 
 ## Commands (Admin)
-- `/whitelist enable|disable|status` — toggle/inspect whitelist
+- `/whitelist help` — show usage
+- `/whitelist status` — inspect whitelist state
+- `/whitelist enable` / `/whitelist disable` — toggle whitelist
 - `/whitelist reload` — reload config from disk; on parse error, keeps current settings and renames the broken file for review
 - `/whitelist lockdown [on|off|status]` — emergency mode
 - `/whitelist list` — list whitelisted SteamIDs (shows last‑known names when available)
@@ -43,6 +45,7 @@ Notes:
 - Default is disabled. Enable explicitly with `/whitelist enable`.
 - Adding by name only works if the player is online or has played on this world before.
 - Recommended workflow: have a new player connect once, then use `/whitelist approve-last`.
+ - Admins/owners can always join even if not whitelisted; they are auto‑added on join and see a quick reminder: “Whitelist is ENABLED|DISABLED. Use /whitelist help”.
 
 ## Configuration & Logs (Per‑World)
 - Directory world: `<worldDir>/GateKeeper/`

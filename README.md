@@ -12,6 +12,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - `/whitelist` server command for enable/disable/list/add/remove.
 - Immediate enforcement on connect; non‑whitelisted users are kicked with a clear message.
 - Admin notification in chat on denied connect attempts with cooldown to reduce spam.
+ - Admins/owners bypass whitelist and are auto‑added on first join; a brief reminder is shown on login.
 
 ## Install & Build
 - Build mod JAR:
@@ -34,25 +35,31 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - You can tweak the title/subtitle text directly in the SVG.
 
 ## Server Commands
-- `/whitelist enable` — turn whitelist on.
-- `/whitelist disable` — turn whitelist off (allow all).
-- `/whitelist status` — show enabled state and counts.
-- `/whitelist reload` — reload config from disk; if parse fails, keeps current settings and renames the broken file.
-- `/whitelist list` — list whitelisted SteamIDs (shows last‑known names when available).
-- `/whitelist lockdown [on|off|status]` — emergency mode; only whitelisted players can join; suppresses notifications.
-- `/whitelist online` — list current connected players with SteamIDs.
-- `/whitelist recent` — show last denied attempts (index, name, SteamID, age, address).
-- `/whitelist recent approve <index>` — approve one of the recent denied attempts.
-- `/whitelist approve-last` — approve the most recent denied attempt.
-- `/whitelist add <auth|name>` — add a SteamID or name.
-- `/whitelist remove <auth|name>` — remove a SteamID or name.
-- Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>`.
-- Permissions: ADMIN and above.
+
+| Command | Description |
+|---|---|
+| `/whitelist help` | Show command help and usage. |
+| `/whitelist status` | Show enabled state and counts. |
+| `/whitelist enable` | Turn whitelist on. |
+| `/whitelist disable` | Turn whitelist off (allow all). |
+| `/whitelist reload` | Reload config from disk; on parse error, keep current settings and rename the broken file. |
+| `/whitelist lockdown [on|off|status]` | Emergency mode; only whitelisted may join; suppress notifications. |
+| `/whitelist list` | List whitelisted SteamIDs (shows last‑known names when available). |
+| `/whitelist online` | List currently connected players with SteamIDs. |
+| `/whitelist recent` | Show last denied attempts (index, name, SteamID, age, address). |
+| `/whitelist recent approve <index>` | Approve one of the recent denied attempts. |
+| `/whitelist approve-last` | Approve the most recent denied attempt. |
+| `/whitelist add <auth|name>` | Add a SteamID or resolve a known name to SteamID and add. |
+| `/whitelist remove <auth|name>` | Remove a SteamID or resolve a known name and remove. |
+
+Aliases: `/whitelist approve <auth|name>`, `/whitelist deny <auth|name>` — Permissions: ADMIN and above.
 
 Notes:
 - When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it asks you to have the player connect once or provide their SteamID. Names are not stored for access.
 - On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
 - Denied attempts are logged to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
+- Autocomplete/typeahead for `/whitelist` may not appear on clients that don’t have the mod installed, but the command still works because it’s parsed on the server. Use `/whitelist help` to see usage.
+ - Admins and owners can always join even if not whitelisted; on first join they are auto‑added to the whitelist, and receive a reminder: “Whitelist is ENABLED|DISABLED. Use /whitelist help”.
 
 ## Config Location (Per‑World)
 - Directory world: `<worldDir>/GateKeeper/whitelist.json`
@@ -76,7 +83,10 @@ Notes:
 
 ## How It Works
 - The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.
-- GateKeeper listens to `ServerClientConnectedEvent` and immediately kicks if the connecting client is not whitelisted for the current world.
+- GateKeeper listens to `ServerClientConnectedEvent` and enforces access:
+  - If whitelist is disabled: allow all.
+  - If enabled: allow if SteamID is whitelisted, or if the player is ADMIN/OWNER (admins/owners are also auto‑added).
+  - Otherwise: record a denied attempt and disconnect with a friendly reason.
 - Admins/owners online receive a one‑per‑auth cooldown chat notification with a command hint to approve.
 
 Security/Integrity:
