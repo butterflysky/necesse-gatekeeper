@@ -25,7 +25,7 @@ public class WhitelistManager {
     private long currentWorldId = Long.MIN_VALUE;
 
     private final Set<Long> authIds = new HashSet<>();
-    private final Set<String> namesLower = new HashSet<>();
+    private final Set<String> namesLower = new HashSet<>(); // legacy entries; not used for allow
     private boolean enabled = true;
     private boolean lockdown = false;
 
@@ -91,7 +91,7 @@ public class WhitelistManager {
                     String val = line.substring(idx + 1).trim();
                     if (key.equals("auth")) {
                         try { authIds.add(Long.parseLong(val)); } catch (Exception ignore) {}
-                    } else if (key.equals("name")) {
+                    } else if (key.equals("name")) { // legacy; retained for readability
                         namesLower.add(val.toLowerCase(Locale.ENGLISH));
                     }
                 }
@@ -111,9 +111,8 @@ public class WhitelistManager {
             for (Long a : authIds) {
                 bw.write("auth:" + a + "\n");
             }
-            for (String n : namesLower) {
-                bw.write("name:" + n + "\n");
-            }
+            // legacy names retained for human readability; not used for allow decision
+            for (String n : namesLower) { bw.write("name:" + n + "\n"); }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -122,9 +121,7 @@ public class WhitelistManager {
     public synchronized boolean isWhitelisted(Server server, long auth, String name) {
         ensureWorld(server);
         if (!enabled) return true; // disabled means allow all
-        if (authIds.contains(auth)) return true;
-        if (name != null && namesLower.contains(name.toLowerCase(Locale.ENGLISH))) return true;
-        return false;
+        return authIds.contains(auth);
     }
 
     public synchronized boolean isLockdown() { return lockdown; }
@@ -168,6 +165,18 @@ public class WhitelistManager {
             }
         }
         return null;
+    }
+
+    public synchronized String getNameByAuth(Server server, long auth) {
+        if (server == null) return null;
+        for (int i = 0; i < server.getSlots(); i++) {
+            necesse.engine.network.server.ServerClient c = server.getClient(i);
+            if (c != null && c.authentication == auth) {
+                return c.getName();
+            }
+        }
+        Map<Long, String> used = server.world.getUsedPlayerNames();
+        return used.get(auth);
     }
 
     public synchronized void rememberNotify(long auth) {
@@ -226,5 +235,15 @@ public class WhitelistManager {
             e.printStackTrace();
         }
         return count;
+    }
+
+    public synchronized void logAdminAction(Server server, String line) {
+        ensureWorld(server);
+        if (configDir == null) return;
+        if (!configDir.exists()) configDir.mkdirs();
+        File out = new File(configDir, "admin_log.txt");
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(out, true))) {
+            bw.write(System.currentTimeMillis() + "," + line + "\n");
+        } catch (IOException ignore) {}
     }
 }

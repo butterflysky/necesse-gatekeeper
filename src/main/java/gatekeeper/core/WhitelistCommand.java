@@ -54,10 +54,11 @@ public class WhitelistCommand extends ModularChatCommand {
             case "list":
                 List<Long> auths = manager.listAuths(server);
                 Collections.sort(auths);
-                logs.add("Auth IDs (" + auths.size() + "): " + auths);
-                List<String> names = manager.listNames(server);
-                names.sort(Comparator.naturalOrder());
-                logs.add("Names (" + names.size() + "): " + names);
+                logs.add("Auth IDs (" + auths.size() + "):");
+                for (Long a : auths) {
+                    String nm = manager.getNameByAuth(server, a);
+                    logs.add(" - " + a + (nm != null ? (" => " + nm) : ""));
+                }
                 break;
             case "lockdown":
                 if (parts.length == 1 || parts[1].equalsIgnoreCase("status")) {
@@ -139,45 +140,31 @@ public class WhitelistCommand extends ModularChatCommand {
             boolean added = manager.addAuth(server, auth);
             logs.add((added ? "Added" : "Already present") + " auth: " + auth);
         } catch (NumberFormatException nfe) {
-            // treat as name
             Long auth = manager.findAuthByName(server, token);
             if (auth != null) {
                 boolean added = manager.addAuth(server, auth);
                 logs.add((added ? "Added" : "Already present") + " auth from name \"" + token + "\": " + auth);
             } else {
-                boolean added = manager.addName(server, token);
-                logs.add((added ? "Added" : "Already present") + " name: " + token + ". Will allow matching name on connect.");
+                logs.add("Could not resolve name '" + token + "' to a SteamID. Ask them to connect once or provide their SteamID.");
             }
         }
     }
 
     private void handleRemove(Server server, CommandLog logs, String token) {
-        try {
-            long auth = Long.parseLong(token);
-            boolean removed = manager.removeAuth(server, auth);
-            logs.add((removed ? "Removed" : "Not present") + " auth: " + auth);
-            if (removed) {
-                // Kick connected clients with this auth
-                for (int i = 0; i < server.getSlots(); i++) {
-                    ServerClient c = server.getClient(i);
-                    if (c != null && c.authentication == auth) {
-                        server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, "Removed from whitelist"));
-                    }
-                }
-            }
-        } catch (NumberFormatException nfe) {
-            boolean removed = manager.removeName(server, token);
-            logs.add((removed ? "Removed" : "Not present") + " name: " + token);
-            if (removed) {
-                // Kick connected clients matching this name who are no longer whitelisted
-                for (int i = 0; i < server.getSlots(); i++) {
-                    ServerClient c = server.getClient(i);
-                    if (c != null && c.getName() != null && c.getName().equalsIgnoreCase(token)) {
-                        boolean stillAllowed = manager.isWhitelisted(server, c.authentication, c.getName());
-                        if (!stillAllowed) {
-                            server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, "Removed from whitelist"));
-                        }
-                    }
+        Long authToRemove = null;
+        try { authToRemove = Long.parseLong(token); } catch (NumberFormatException ignore) {
+            authToRemove = manager.findAuthByName(server, token);
+        }
+        if (authToRemove == null) { logs.add("Could not resolve '" + token + "' to a SteamID"); return; }
+        boolean removed = manager.removeAuth(server, authToRemove);
+        logs.add((removed ? "Removed" : "Not present") + " auth: " + authToRemove);
+        if (removed) {
+            for (int i = 0; i < server.getSlots(); i++) {
+                ServerClient c = server.getClient(i);
+                if (c != null && c.authentication == authToRemove) {
+                    String nm = c.getName();
+                    server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, "Removed from whitelist"));
+                    manager.logAdminAction(server, "kick_on_remove," + authToRemove + "," + (nm == null ? "" : nm));
                 }
             }
         }
@@ -186,8 +173,8 @@ public class WhitelistCommand extends ModularChatCommand {
     private void printHelp(CommandLog logs) {
         logs.add("/whitelist enable|disable|status|lockdown [on|off|status]");
         logs.add("/whitelist list|online|recent|approve-last|export");
-        logs.add("/whitelist add <auth|name> (approve is alias)");
-        logs.add("/whitelist remove <auth|name> (deny is alias)");
+        logs.add("/whitelist add <auth|name> (name resolves to auth if known)");
+        logs.add("/whitelist remove <auth|name> (deny is alias; removing by name resolves to auth)");
         logs.add("/whitelist recent approve <index>");
     }
 }
