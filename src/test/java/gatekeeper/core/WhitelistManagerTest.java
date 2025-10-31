@@ -68,22 +68,22 @@ class WhitelistManagerTest {
         Server server = mockServerForWorldPath(tempDir);
         WhitelistManager mgr = new WhitelistManager();
         mgr.setEnabled(server, true);
+        mgr.setLockdown(server, true);
         mgr.addAuth(server, 100L);
         mgr.addAuth(server, 200L);
-        // Read file
-        File file = new File(new File(tempDir, "GateKeeper"), "whitelist.json");
-        assertTrue(file.exists());
-        String text = new String(Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(text.contains("\"enabled\": true"));
-        assertTrue(text.contains("\"auth\""));
-        assertTrue(text.contains("["));
-        assertTrue(text.contains("100"));
-        assertTrue(text.contains("200"));
-
-        // New manager should load same
+        // New manager should load same (round-trip)
         WhitelistManager mgr2 = new WhitelistManager();
+        // Touch world-bound API to trigger load
         assertTrue(mgr2.isWhitelisted(server, 100L, null));
         assertTrue(mgr2.isWhitelisted(server, 200L, null));
+        assertFalse(mgr2.isWhitelisted(server, 300L, null));
+        assertTrue(mgr2.isEnabled());
+        assertTrue(mgr2.isLockdown());
+
+        // Compare sets ignoring order
+        java.util.List<Long> ids = mgr2.listAuths(server);
+        java.util.Set<Long> set = new java.util.HashSet<>(ids);
+        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList(100L, 200L)), set);
     }
 
     @Test
