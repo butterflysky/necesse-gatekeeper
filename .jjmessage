@@ -1,0 +1,8 @@
+Switch whitelist persistence to JSON; update tests and docs
+
+- Replace whitelist.txt with whitelist.json (enabled, lockdown, auth array).
+- Implement Gson load/save in WhitelistManager (pretty-printed JSON).
+- Update WhitelistManagerTest to expect JSON format and filename.
+- Update README.md and WORKSHOP.md to document JSON location/format.
+- No backward support for text format per project direction.
+- Per-world paths and audit logs remain unchanged.

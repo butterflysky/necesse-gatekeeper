@@ -64,18 +64,19 @@ class WhitelistManagerTest {
     }
 
     @Test
-    void saveLoad_roundTrip_authOnlyFormat() throws Exception {
+    void saveLoad_roundTrip_jsonFormat() throws Exception {
         Server server = mockServerForWorldPath(tempDir);
         WhitelistManager mgr = new WhitelistManager();
         mgr.setEnabled(server, true);
         mgr.addAuth(server, 100L);
         mgr.addAuth(server, 200L);
         // Read file
-        File file = new File(new File(tempDir, "GateKeeper"), "whitelist.txt");
+        File file = new File(new File(tempDir, "GateKeeper"), "whitelist.json");
         assertTrue(file.exists());
         String text = new String(Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8);
-        assertTrue(text.contains("enabled=true"));
-        assertTrue(text.contains("auth:["));
+        assertTrue(text.contains("\"enabled\": true"));
+        assertTrue(text.contains("\"auth\""));
+        assertTrue(text.contains("["));
         assertTrue(text.contains("100"));
         assertTrue(text.contains("200"));
 

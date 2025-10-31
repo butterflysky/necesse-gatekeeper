@@ -44,11 +44,13 @@ Notes:
 - Directory world: `<worldDir>/GateKeeper/`
 - Zip world: `<parent>/<worldName>.GateKeeper/`
 - Files:
-  - `whitelist.txt` (auth‑only):
-    ```
-    enabled=true
-    lockdown=false
-    auth:[76561198000000000, 76561198000000001, 76561198000000002]
+  - `whitelist.json` (auth‑only):
+    ```json
+    {
+      "enabled": true,
+      "lockdown": false,
+      "auth": [76561198000000000, 76561198000000001, 76561198000000002]
+    }
     ```
   - `denied_log.txt`: timestamped denied connect attempts
   - `admin_log.txt`: timestamped admin actions (e.g., kicks on removal)

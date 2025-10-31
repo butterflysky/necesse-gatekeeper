@@ -28,6 +28,9 @@ import java.util.Set;
 
 import necesse.engine.network.server.Server;
 import necesse.engine.world.World;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonSyntaxException;
 
 public class WhitelistManager {
     // Per-world computed config path
@@ -79,12 +82,12 @@ public class WhitelistManager {
             String baseName = World.getWorldDisplayName(worldPath.getName());
             configDir = new File(worldPath.getParentFile(), baseName + ".GateKeeper");
         }
-        configFile = new File(configDir, "whitelist.txt");
+        configFile = new File(configDir, "whitelist.json");
         currentWorldId = wid;
         loadInternal();
     }
 
-    /** Load whitelist.txt from disk into memory (create if missing). */
+    /** Load whitelist.json from disk into memory (create if missing). */
     private synchronized void loadInternal() {
         authIds.clear();
         enabled = false;
@@ -95,54 +98,34 @@ public class WhitelistManager {
             return;
         }
         try (BufferedReader br = new BufferedReader(new FileReader(configFile))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("#")) continue;
-                if (line.equalsIgnoreCase("enabled=true")) { enabled = true; continue; }
-                if (line.equalsIgnoreCase("enabled=false")) { enabled = false; continue; }
-                if (line.equalsIgnoreCase("lockdown=true")) { lockdown = true; continue; }
-                if (line.equalsIgnoreCase("lockdown=false")) { lockdown = false; continue; }
-                int idx = line.indexOf(":");
-                if (idx > 0) {
-                    String key = line.substring(0, idx).trim().toLowerCase(Locale.ENGLISH);
-                    String val = line.substring(idx + 1).trim();
-                    if (key.equals("auth") || key.equals("auths")) {
-                        // Support list format: auth:[id1, id2, ...] or single: auth:123
-                        if (val.startsWith("[") && val.endsWith("]")) {
-                            String inner = val.substring(1, val.length() - 1);
-                            if (!inner.trim().isEmpty()) {
-                                for (String tok : inner.split(",")) {
-                                    String t = tok.trim();
-                                    if (!t.isEmpty()) {
-                                        try { authIds.add(Long.parseLong(t)); } catch (Exception ignore) {}
-                                    }
-                                }
-                            }
-                        } else {
-                            try { authIds.add(Long.parseLong(val)); } catch (Exception ignore) {}
-                        }
-                    }
+            Gson gson = new Gson();
+            WhitelistConfig cfg = gson.fromJson(br, WhitelistConfig.class);
+            if (cfg != null) {
+                this.enabled = cfg.enabled;
+                this.lockdown = cfg.lockdown;
+                if (cfg.auth != null) {
+                    this.authIds.addAll(cfg.auth);
                 }
             }
-        } catch (IOException e) {
+        } catch (IOException | JsonSyntaxException e) {
+            // Malformed or unreadable: keep defaults and rewrite on next save
             e.printStackTrace();
         }
     }
 
-    /** Persist current whitelist state to whitelist.txt. */
+    /** Persist current whitelist state to whitelist.json. */
     private synchronized void saveInternal() {
         if (configDir == null || configFile == null) return;
         if (!configDir.exists()) configDir.mkdirs();
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(configFile))) {
-            bw.write("# GateKeeper whitelist\n");
-            bw.write("enabled=" + enabled + "\n");
-            bw.write("lockdown=" + lockdown + "\n");
-            // Write list format for compactness and clarity
             List<Long> ids = new ArrayList<>(authIds);
             java.util.Collections.sort(ids);
-            String joined = ids.isEmpty() ? "" : ids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
-            bw.write("auth:[" + joined + "]\n");
+            WhitelistConfig cfg = new WhitelistConfig();
+            cfg.enabled = this.enabled;
+            cfg.lockdown = this.lockdown;
+            cfg.auth = ids;
+            Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+            bw.write(gson.toJson(cfg));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -283,4 +266,11 @@ public class WhitelistManager {
             bw.write(System.currentTimeMillis() + "," + line + "\n");
         } catch (IOException ignore) {}
     }
+}
+
+/** Simple JSON structure for whitelist persistence. */
+class WhitelistConfig {
+    boolean enabled = false;
+    boolean lockdown = false;
+    java.util.List<Long> auth = new java.util.ArrayList<>();
 }

@@ -50,18 +50,23 @@ Notes:
 - Denied attempts are logged to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
 
 ## Config Location (Per‑World)
-- Directory world: `<worldDir>/GateKeeper/whitelist.txt`
-- Zip world: `<worldParent>/<worldName>.GateKeeper/whitelist.txt`
+- Directory world: `<worldDir>/GateKeeper/whitelist.json`
+- Zip world: `<worldParent>/<worldName>.GateKeeper/whitelist.json`
 
-Whitelist file format (text):
+Whitelist file format (JSON):
 ```
-enabled=true
-lockdown=false
-auth:[76561198000000000, 76561198000000001, 76561198000000002]
+{
+  "enabled": true,
+  "lockdown": false,
+  "auth": [
+    76561198000000000,
+    76561198000000001,
+    76561198000000002
+  ]
+}
 ```
 Notes:
-- `auth` uses a simple list syntax with comma‑separated SteamIDs.
-- Order is not significant.
+- `auth` is an array of SteamIDs (longs). Order is not significant.
 
 ## How It Works
 - The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.
