@@ -1,5 +1,13 @@
 package gatekeeper.core;
 
+/**
+ * GateKeeper server command entry point.
+ * <p>
+ * Provides administrative subcommands to manage the per-world whitelist:
+ * enable/disable/status, lockdown, list, online, recent, approve-last, export,
+ * add/remove (with approve/deny aliases), and helpers to approve recent attempts.
+ */
+
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -18,6 +26,10 @@ import necesse.engine.network.packet.PacketDisconnect;
 public class WhitelistCommand extends ModularChatCommand {
     private final WhitelistManager manager;
 
+    /**
+     * Constructs a whitelist command bound to the given manager.
+     * @param manager per-world whitelist manager
+     */
     public WhitelistCommand(WhitelistManager manager) {
         super(
                 "whitelist",
@@ -30,6 +42,9 @@ public class WhitelistCommand extends ModularChatCommand {
     }
 
     @Override
+    /**
+     * Parses and executes a whitelist subcommand.
+     */
     public void runModular(Client client, Server server, ServerClient serverClient, Object[] args, String[] errors, CommandLog logs) {
         String rest = ((String) args[0]).trim();
         if (rest.isEmpty()) {
@@ -134,6 +149,7 @@ public class WhitelistCommand extends ModularChatCommand {
         }
     }
 
+    /** Handle adding by SteamID or resolving a known name to SteamID. */
     private void handleAdd(Server server, CommandLog logs, String token) {
         try {
             long auth = Long.parseLong(token);
@@ -150,6 +166,7 @@ public class WhitelistCommand extends ModularChatCommand {
         }
     }
 
+    /** Remove a SteamID (or resolve a name to SteamID) and kick connected matches. */
     private void handleRemove(Server server, CommandLog logs, String token) {
         Long authToRemove = null;
         try { authToRemove = Long.parseLong(token); } catch (NumberFormatException ignore) {
@@ -170,6 +187,7 @@ public class WhitelistCommand extends ModularChatCommand {
         }
     }
 
+    /** Print summarized command help to the server log. */
     private void printHelp(CommandLog logs) {
         logs.add("/whitelist enable|disable|status|lockdown [on|off|status]");
         logs.add("/whitelist list|online|recent|approve-last|export");

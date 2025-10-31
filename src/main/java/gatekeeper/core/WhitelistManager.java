@@ -1,5 +1,16 @@
 package gatekeeper.core;
 
+/**
+ * Manages GateKeeper whitelist state and persistence per world.
+ * <p>
+ * - Persists whitelist next to the world save.
+ * - Enforces auth-only access (SteamID64).
+ * - Tracks denied attempts and writes audit logs.
+ * - Provides lookups between auth and last-known name.
+ * <p>
+ * Thread-safety: public methods synchronize on this instance.
+ */
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -48,8 +59,17 @@ public class WhitelistManager {
     private final LinkedList<Attempt> recent = new LinkedList<>();
     private static final int RECENT_MAX = 50;
 
+    /**
+     * @return true if whitelist is enabled; when disabled all connects are allowed.
+     */
     public boolean isEnabled() { return enabled; }
+    /**
+     * Enable/disable the whitelist for the current world.
+     * @param server Server providing the active world
+     * @param value new enabled state
+     */
     public void setEnabled(Server server, boolean value) { ensureWorld(server); enabled = value; saveInternal(); }
+    /** Ensure config paths for the given server world are initialized and loaded. */
     private void ensureWorld(Server server) {
         if (server == null || server.world == null) return;
         long wid = server.world.getUniqueID();
@@ -66,6 +86,7 @@ public class WhitelistManager {
         loadInternal();
     }
 
+    /** Load whitelist.txt from disk into memory (create if missing). */
     private synchronized void loadInternal() {
         authIds.clear();
         namesLower.clear();
@@ -101,6 +122,7 @@ public class WhitelistManager {
         }
     }
 
+    /** Persist current whitelist state to whitelist.txt. */
     private synchronized void saveInternal() {
         if (configDir == null || configFile == null) return;
         if (!configDir.exists()) configDir.mkdirs();
@@ -118,6 +140,10 @@ public class WhitelistManager {
         }
     }
 
+    /**
+     * Returns whether the provided SteamID (auth) is allowed in the current world.
+     * Name is ignored for access decisions and used only for logging.
+     */
     public synchronized boolean isWhitelisted(Server server, long auth, String name) {
         ensureWorld(server);
         if (!enabled) return true; // disabled means allow all
@@ -127,8 +153,13 @@ public class WhitelistManager {
     public synchronized boolean isLockdown() { return lockdown; }
     public synchronized void setLockdown(Server server, boolean on) { ensureWorld(server); lockdown = on; saveInternal(); }
 
+    /** Add a SteamID to the whitelist. @return true if newly added. */
     public synchronized boolean addAuth(Server server, long auth) { ensureWorld(server); boolean added = authIds.add(auth); if (added) saveInternal(); return added; }
+    /** Remove a SteamID from the whitelist. @return true if it was present. */
     public synchronized boolean removeAuth(Server server, long auth) { ensureWorld(server); boolean rem = authIds.remove(auth); if (rem) saveInternal(); return rem; }
+    /**
+     * Legacy helper to keep a name line in the file for readability; does not grant access.
+     */
     public synchronized boolean addName(Server server, String name) {
         ensureWorld(server);
         if (name == null) return false;
@@ -136,6 +167,7 @@ public class WhitelistManager {
         if (added) saveInternal();
         return added;
     }
+    /** Remove a legacy stored name line; does not affect access. */
     public synchronized boolean removeName(Server server, String name) {
         ensureWorld(server);
         if (name == null) return false;
@@ -144,9 +176,15 @@ public class WhitelistManager {
         return rem;
     }
 
+    /** @return snapshot of all whitelisted SteamIDs for the current world. */
     public synchronized List<Long> listAuths(Server server) { ensureWorld(server); return new ArrayList<>(authIds); }
+    /** @return snapshot of legacy stored names (for file readability only). */
     public synchronized List<String> listNames(Server server) { ensureWorld(server); return new ArrayList<>(namesLower); }
 
+    /**
+     * Resolve a player name to SteamID using online clients and saved players for this world.
+     * @return SteamID or null if not found
+     */
     public synchronized Long findAuthByName(Server server, String name) {
         if (server == null || name == null) return null;
         String nlow = name.toLowerCase(Locale.ENGLISH);
@@ -167,6 +205,7 @@ public class WhitelistManager {
         return null;
     }
 
+    /** Resolve a SteamID to last-known player name (online preferred, else saved). */
     public synchronized String getNameByAuth(Server server, long auth) {
         if (server == null) return null;
         for (int i = 0; i < server.getSlots(); i++) {
@@ -179,11 +218,13 @@ public class WhitelistManager {
         return used.get(auth);
     }
 
+    /** Mark that we notified admins for this auth (used for rate limiting). */
     public synchronized void rememberNotify(long auth) {
         lastNotify.put(auth, System.currentTimeMillis());
         lastGlobalNotify = System.currentTimeMillis();
     }
 
+    /** Return true if we should send an admin notification for this auth now. */
     public synchronized boolean shouldNotify(long auth, long cooldownMs) {
         long now = System.currentTimeMillis();
         if (now - lastGlobalNotify < NOTIFY_GLOBAL_MIN_INTERVAL_MS) return false;
@@ -192,6 +233,7 @@ public class WhitelistManager {
         return now - last > cooldownMs;
     }
 
+    /** Record a denied connect attempt in memory and append to denied_log.txt. */
     public synchronized void recordDeniedAttempt(Server server, long auth, String name, String address) {
         ensureWorld(server);
         Attempt a = new Attempt(System.currentTimeMillis(), auth, name, address);
@@ -208,14 +250,21 @@ public class WhitelistManager {
         }
     }
 
+    /** @return snapshot list of recent denied attempts (most recent last). */
     public synchronized List<Attempt> getRecentAttempts() { return new ArrayList<>(recent); }
+    /** @return the SteamID from the most recent denied attempt, or null. */
     public synchronized Long getLastDeniedAuth() { return recent.isEmpty() ? null : recent.getLast().auth; }
 
+    /** @return the GateKeeper directory for the current world (created on demand). */
     public synchronized File getConfigDir(Server server) {
         ensureWorld(server);
         return configDir;
     }
 
+    /**
+     * Export saved players (SteamID,name) to known_players.txt next to the world.
+     * @return number of entries written
+     */
     public synchronized int exportKnownPlayers(Server server) {
         ensureWorld(server);
         if (configDir == null) return 0;
@@ -237,6 +286,7 @@ public class WhitelistManager {
         return count;
     }
 
+    /** Append an admin/audit log line (timestamped) to admin_log.txt. */
     public synchronized void logAdminAction(Server server, String line) {
         ensureWorld(server);
         if (configDir == null) return;

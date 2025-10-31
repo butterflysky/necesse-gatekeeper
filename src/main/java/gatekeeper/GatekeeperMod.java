@@ -1,5 +1,12 @@
 package gatekeeper;
 
+/**
+ * GateKeeper mod entry point.
+ * <p>
+ * Registers the whitelist manager, server command, and connection listener
+ * during init.
+ */
+
 import gatekeeper.core.WhitelistCommand;
 import gatekeeper.core.WhitelistManager;
 import gatekeeper.core.events.WhitelistConnectionListener;
@@ -16,6 +23,7 @@ public class GatekeeperMod {
     private static WhitelistManager whitelistManager;
 
     // Called first - register content and commands
+    /** Register command and listener; load per-world config on first use. */
     public void init() {
         System.out.println(MOD_NAME + " is loading...");
 
@@ -33,10 +41,12 @@ public class GatekeeperMod {
     }
 
     // Called second - load resources (images, sounds, etc...)
+    /** No resources to load. Reserved for future textures/sounds. */
     public void initResources() {
     }
 
     // Called last - everything is loaded, safe to reference any content
+    /** Post-initialization hook; not used currently. */
     public void postInit() {
     }
 
