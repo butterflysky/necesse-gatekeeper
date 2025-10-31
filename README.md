@@ -18,14 +18,14 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 
 ### Workshop Preview Image
 - The repository includes a vector preview at `resources/preview.svg` (1024x1024 design).
-- Export a PNG named `preview.png` (Steam Workshop commonly accepts 512–1024 square):
+- Export a PNG named `preview.png` into `src/main/resources/` (Steam Workshop commonly accepts 512–1024 square):
   - With Inkscape:
     ```bash
-    inkscape resources/preview.svg --export-type=png --export-filename=resources/preview.png --export-width=1024 --export-height=1024
+    inkscape resources/preview.svg --export-type=png --export-filename=src/main/resources/preview.png --export-width=1024 --export-height=1024
     ```
   - With rsvg-convert (librsvg):
     ```bash
-    rsvg-convert -w 1024 -h 1024 resources/preview.svg > resources/preview.png
+    rsvg-convert -w 1024 -h 1024 resources/preview.svg > src/main/resources/preview.png
     ```
 - You can tweak the title/subtitle text directly in the SVG.
 

@@ -1,5 +1,12 @@
 # GateKeeper — Server Whitelist & Access Control for Necesse
 
+## TL;DR
+- Server‑side whitelist using SteamID (auth‑only). No client mod needed.
+- Prevent griefing; only approved SteamIDs can connect when enabled.
+- Easy admin workflow: `/whitelist enable`, then have players connect once and `/whitelist approve-last`.
+- Emergency lockdown mode and rate‑limited notices.
+- Back up your world before enabling.
+
 Strongly recommended: Back up your world before enabling the whitelist for the first time. Turning on a whitelist without entries can lock out players (and you) until SteamIDs are added.
 
 ## Overview
@@ -60,7 +67,3 @@ Notes:
 ## Source & Issues
 - GitHub: https://github.com/butterflysky/necesse-gatekeeper
 - Please include server logs and your `GateKeeper/` files when reporting issues.
-
-## Credits
-- GateKeeper — access control and admin workflow design focused on reliability and clarity.
-
