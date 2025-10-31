@@ -32,7 +32,7 @@ Access control for Necesse multiplayer servers: whitelist players by SteamID or 
 - Permissions: ADMIN and above.
 
 Notes:
-- When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it stores the name for a one‑time allow.
+- When adding a name, the mod tries to resolve an existing SteamID from online players or saved clients. If found, it adds the ID; otherwise it asks you to have the player connect once or provide their SteamID. Names are not stored for access.
 - On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
 - Denied attempts are logged to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
 
@@ -44,7 +44,6 @@ Whitelist file format (text):
 ```
 enabled=true
 auth:76561198000000000
-name:SomeFriend
 ```
 
 ## How It Works
