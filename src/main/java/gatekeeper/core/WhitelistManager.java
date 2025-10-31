@@ -89,27 +89,19 @@ public class WhitelistManager {
 
     /** Load whitelist.json from disk into memory (create if missing). */
     private synchronized void loadInternal() {
-        authIds.clear();
-        enabled = false;
         if (configDir == null || configFile == null) return;
         if (!configDir.exists()) configDir.mkdirs();
         if (!configFile.exists()) {
-            saveInternal();
+            // No file present yet; keep defaults
             return;
         }
-        try (BufferedReader br = new BufferedReader(new FileReader(configFile))) {
-            Gson gson = new Gson();
-            WhitelistConfig cfg = gson.fromJson(br, WhitelistConfig.class);
-            if (cfg != null) {
-                this.enabled = cfg.enabled;
-                this.lockdown = cfg.lockdown;
-                if (cfg.auth != null) {
-                    this.authIds.addAll(cfg.auth);
-                }
-            }
+        try {
+            WhitelistConfig cfg = readConfig(configFile);
+            applyConfig(cfg);
         } catch (IOException | JsonSyntaxException e) {
-            // Malformed or unreadable: keep defaults and rewrite on next save
-            e.printStackTrace();
+            // Malformed or unreadable: keep defaults and rename broken file
+            String renamed = renameBrokenConfig();
+            System.err.println("GateKeeper: Failed to parse whitelist.json; kept defaults. Renamed broken file to: " + renamed);
         }
     }
 
@@ -186,6 +178,55 @@ public class WhitelistManager {
         }
         Map<Long, String> used = server.world.getUsedPlayerNames();
         return used.get(auth);
+    }
+
+    /**
+     * Reloads configuration from disk in a non-destructive manner.
+     * If parsing fails, in-memory state remains unchanged and the broken file is renamed.
+     * @return true if reloaded successfully; false if parse error (state unchanged)
+     */
+    public synchronized boolean reload(Server server, StringBuilder messageOut) {
+        ensureWorld(server);
+        if (configFile == null) {
+            if (messageOut != null) messageOut.append("No config file to reload.");
+            return false;
+        }
+        try {
+            WhitelistConfig cfg = readConfig(configFile);
+            applyConfig(cfg);
+            if (messageOut != null) messageOut.append("Reloaded whitelist from ").append(configFile.getName());
+            return true;
+        } catch (IOException | JsonSyntaxException e) {
+            String renamed = renameBrokenConfig();
+            if (messageOut != null) messageOut.append("Error parsing whitelist; kept existing config. Renamed broken file to ").append(renamed);
+            return false;
+        }
+    }
+
+    // --- Helpers ----------------------------------------------------------
+    private WhitelistConfig readConfig(File file) throws IOException, JsonSyntaxException {
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            Gson gson = new Gson();
+            WhitelistConfig cfg = gson.fromJson(br, WhitelistConfig.class);
+            if (cfg == null) cfg = new WhitelistConfig();
+            return cfg;
+        }
+    }
+
+    private void applyConfig(WhitelistConfig cfg) {
+        // Reset then apply
+        this.enabled = cfg.enabled;
+        this.lockdown = cfg.lockdown;
+        this.authIds.clear();
+        if (cfg.auth != null) this.authIds.addAll(cfg.auth);
+    }
+
+    private String renameBrokenConfig() {
+        if (configFile == null) return null;
+        String ts = new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new java.util.Date());
+        File renamed = new File(configDir, configFile.getName() + ".broken-" + ts);
+        boolean ok = configFile.renameTo(renamed);
+        return ok ? renamed.getName() : configFile.getName();
     }
 
     /** Mark that we notified admins for this auth (used for rate limiting). */

@@ -65,6 +65,11 @@ public class WhitelistCommand extends ModularChatCommand {
                 logs.add("Whitelist is " + (manager.isEnabled() ? "ENABLED" : "DISABLED"));
                 logs.add("Auth IDs: " + manager.listAuths(server).size());
                 break;
+            case "reload":
+                StringBuilder sb = new StringBuilder();
+                boolean ok = manager.reload(server, sb);
+                logs.add((ok ? "OK: " : "ERROR: ") + sb.toString());
+                break;
             case "list":
                 List<Long> auths = manager.listAuths(server);
                 Collections.sort(auths);
@@ -188,7 +193,7 @@ public class WhitelistCommand extends ModularChatCommand {
 
     /** Print summarized command help to the server log. */
     private void printHelp(CommandLog logs) {
-        logs.add("/whitelist enable|disable|status|lockdown [on|off|status]");
+        logs.add("/whitelist enable|disable|status|reload|lockdown [on|off|status]");
         logs.add("/whitelist list|online|recent|approve-last|export");
         logs.add("/whitelist add <auth|name> (name resolves to auth if known)");
         logs.add("/whitelist remove <auth|name> (deny is alias; removing by name resolves to auth)");

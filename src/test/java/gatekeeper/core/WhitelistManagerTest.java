@@ -50,6 +50,7 @@ class WhitelistManagerTest {
         WhitelistManager mgr = new WhitelistManager();
         // Disabled by default; should allow all
         assertFalse(mgr.isEnabled());
+        assertFalse(mgr.isLockdown());
         assertTrue(mgr.isWhitelisted(server, 111L, "any"));
     }
 
@@ -84,6 +85,62 @@ class WhitelistManagerTest {
         java.util.List<Long> ids = mgr2.listAuths(server);
         java.util.Set<Long> set = new java.util.HashSet<>(ids);
         assertEquals(new java.util.HashSet<>(java.util.Arrays.asList(100L, 200L)), set);
+    }
+
+    @Test
+    void malformedJson_renamed_defaultsRemain_and_saveRewrites() throws Exception {
+        // Prepare malformed JSON file
+        File gk = new File(tempDir, "GateKeeper");
+        gk.mkdirs();
+        File cfg = new File(gk, "whitelist.json");
+        java.nio.file.Files.write(cfg.toPath(), "{ not: json,".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        Server server = mockServerForWorldPath(tempDir);
+        WhitelistManager mgr = new WhitelistManager();
+        // Touch to trigger load
+        assertTrue(mgr.isWhitelisted(server, 1L, null)); // defaults allow
+        assertFalse(mgr.isEnabled());
+        assertFalse(mgr.isLockdown());
+
+        // Broken file should have been renamed
+        String[] names = gk.list();
+        assertNotNull(names);
+        boolean renamedFound = java.util.Arrays.stream(names).anyMatch(n -> n.startsWith("whitelist.json.broken-"));
+        assertTrue(renamedFound);
+
+        // Saving should write a fresh valid JSON file
+        mgr.setEnabled(server, true);
+        File newCfg = new File(gk, "whitelist.json");
+        assertTrue(newCfg.exists());
+        String body = new String(java.nio.file.Files.readAllBytes(newCfg.toPath()), java.nio.charset.StandardCharsets.UTF_8);
+        assertTrue(body.contains("\"enabled\": true"));
+    }
+
+    @Test
+    void reload_withMalformed_doesNotChangeState_and_renames() throws Exception {
+        // Write a valid JSON first
+        Server server = mockServerForWorldPath(tempDir);
+        WhitelistManager mgr = new WhitelistManager();
+        mgr.setEnabled(server, true);
+        mgr.addAuth(server, 999L);
+
+        // Overwrite on disk with garbage
+        File gk = new File(tempDir, "GateKeeper");
+        File cfg = new File(gk, "whitelist.json");
+        java.nio.file.Files.write(cfg.toPath(), "garbage".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+
+        StringBuilder msg = new StringBuilder();
+        boolean ok = mgr.reload(server, msg);
+        assertFalse(ok);
+        // State should remain unchanged in memory
+        assertTrue(mgr.isEnabled());
+        assertTrue(mgr.isWhitelisted(server, 999L, null));
+
+        // File should have been renamed
+        String[] names = gk.list();
+        assertNotNull(names);
+        boolean renamedFound = java.util.Arrays.stream(names).anyMatch(n -> n.startsWith("whitelist.json.broken-"));
+        assertTrue(renamedFound);
     }
 
     @Test
