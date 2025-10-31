@@ -13,6 +13,9 @@ project.ext.modVersion = "1.0.0" // Your current builds version. Must follow the
 project.ext.gameVersion = "1.0.2" // The target game version.
 project.ext.modDescription = "A mod to enable access control for multiplayer servers." // Short description of what your mod is.
 project.ext.author = "butterflysky" // Your name
+// Steam App ID used only for local client dev runs (Steam API init). Not used for tests or server.
+// Can be overridden via env STEAM_APP_ID or -PsteamAppId=<id>
+project.ext.steamAppId = (project.findProperty('steamAppId') ?: System.getenv('STEAM_APP_ID') ?: '1169040')
 
 /**
  * When setting clientside to true, it means servers do not need this mod for clients to connect and vice versa.
@@ -166,7 +169,7 @@ task runClient(type: JavaExec) {
     classpath = files(gameDirectory + "/Necesse.jar")
     workingDir = file(gameDirectory)
     // Provide Steam App ID via environment for local client dev runs
-    environment "SteamAppId", "1169040"
+    environment "SteamAppId", project.ext.steamAppId
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev", "-mod \"${buildLocation}\""]
@@ -179,7 +182,7 @@ task runDevClient(type: JavaExec) {
 
     classpath = files(gameDirectory + "/Necesse.jar")
     workingDir = file(gameDirectory)
-    environment "SteamAppId", "1169040"
+    environment "SteamAppId", project.ext.steamAppId
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev 1", "-mod \"${buildLocation}\""]
