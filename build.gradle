@@ -132,20 +132,6 @@ dependencies {
     testImplementation 'com.google.code.gson:gson:2.13.2'
 }
 
-task createAppID {
-    group = "necesse"
-    description = "Creates steam_appid.txt file"
-
-    doLast {
-        // Prefer the app id from the game installation if present; else write fallback
-        File appid = new File(gameDirectory, "steam_appid.txt")
-        if (!appid.exists()) {
-            // 1169040 is Necesse's Steam App ID; only used for local client dev runs
-            appid.text = "1169040"
-        }
-    }
-}
-
 task createModInfoFile(type: JavaExec) {
     group = "necesse"
     description = "Creates the mod info file"
@@ -175,19 +161,12 @@ tasks.named('classes') {
 task runClient(type: JavaExec) {
     group = "necesse"
     description = "Run client with current mod"
-    dependsOn("buildModJar", "createAppID")
+    dependsOn("buildModJar")
 
     classpath = files(gameDirectory + "/Necesse.jar")
     workingDir = file(gameDirectory)
-    doFirst {
-        // Ensure Steam can detect app id when running outside Steam
-        File appid = new File(gameDirectory, "steam_appid.txt")
-        if (appid.exists()) {
-            environment "SteamAppId", appid.text.trim()
-        } else {
-            environment "SteamAppId", "1169040"
-        }
-    }
+    // Provide Steam App ID via environment for local client dev runs
+    environment "SteamAppId", "1169040"
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev", "-mod \"${buildLocation}\""]
@@ -196,18 +175,11 @@ task runClient(type: JavaExec) {
 task runDevClient(type: JavaExec) {
     group = "necesse"
     description = "Run client with current mod"
-    dependsOn("buildModJar", "createAppID")
+    dependsOn("buildModJar")
 
     classpath = files(gameDirectory + "/Necesse.jar")
     workingDir = file(gameDirectory)
-    doFirst {
-        File appid = new File(gameDirectory, "steam_appid.txt")
-        if (appid.exists()) {
-            environment "SteamAppId", appid.text.trim()
-        } else {
-            environment "SteamAppId", "1169040"
-        }
-    }
+    environment "SteamAppId", "1169040"
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev 1", "-mod \"${buildLocation}\""]
