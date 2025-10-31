@@ -19,7 +19,7 @@ project.ext.author = "butterflysky" // Your name
  * IMPORTANT: If you set this to true, make sure that your mod does not add any content or do anything
  * that could cause clients and servers to desync. This includes registering any items, objects, tiles, packets etc.
  */
-project.ext.clientside = false
+project.ext.clientside = true
 
 /**
  * The other mod dependencies of this mod
