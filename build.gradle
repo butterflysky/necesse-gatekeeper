@@ -128,8 +128,8 @@ dependencies {
     testImplementation files(gameDirectory + "/Necesse.jar")
 
     // Runtime JSON (bundled into mod jar via libDepends)
-    libDepends 'com.google.code.gson:gson:2.11.0'
-    testImplementation 'com.google.code.gson:gson:2.11.0'
+    libDepends 'com.google.code.gson:gson:2.13.2'
+    testImplementation 'com.google.code.gson:gson:2.13.2'
 }
 
 task createAppID {
