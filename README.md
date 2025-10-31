@@ -1,4 +1,8 @@
-# GateKeeper
+<p align="center">
+  <img src="src/main/resources/preview.png" alt="GateKeeper preview" width="256" />
+</p>
+
+<h1 align="center">GateKeeper</h1>
 
 Access control for Necesse multiplayer servers: whitelist players by SteamID or by name, manage the list via server commands, and enforce at connection time.
 
@@ -87,6 +91,13 @@ Security/Integrity:
   ```bash
   ./gradlew runDevClient
   ```
+
+### Javadocs
+- Generate API docs from source Javadocs:
+  ```bash
+  ./gradlew javadoc
+  ```
+- Output: `build/docs/javadoc/index.html`
 
 ### Dev Workflow: Auto‑attach Game Sources in VS Code
 - One‑shot setup:

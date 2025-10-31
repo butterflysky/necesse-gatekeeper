@@ -1,5 +1,7 @@
 # GateKeeper — Server Whitelist & Access Control for Necesse
 
+Note: This file is a helper draft for Steam Workshop upload. Copy/paste relevant sections into the in-game uploader when publishing.
+
 ## TL;DR
 - Server‑side whitelist using SteamID (auth‑only). No client mod needed.
 - Prevent griefing; only approved SteamIDs can connect when enabled.
@@ -25,6 +27,7 @@ GateKeeper adds an auth‑only (SteamID64) whitelist to Necesse dedicated server
 
 ## Commands (Admin)
 - `/whitelist enable|disable|status` — toggle/inspect whitelist
+- `/whitelist reload` — reload config from disk; on parse error, keeps current settings and renames the broken file for review
 - `/whitelist lockdown [on|off|status]` — emergency mode
 - `/whitelist list` — list whitelisted SteamIDs (shows last‑known names when available)
 - `/whitelist online` — show currently connected players (SteamIDs)
