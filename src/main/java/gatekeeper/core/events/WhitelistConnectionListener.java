@@ -7,6 +7,7 @@ import necesse.engine.network.packet.PacketChatMessage;
 import necesse.engine.network.packet.PacketDisconnect;
 import necesse.engine.network.server.Server;
 import necesse.engine.network.server.ServerClient;
+import necesse.engine.commands.PermissionLevel;
 
 /**
  * Enforces whitelist policy on new client connections.
@@ -44,6 +45,11 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
 
         long auth = c.authentication;
         String name = c.getName();
+
+        // Always allow the server owner to connect regardless of whitelist/lockdown
+        if (c.getPermissionLevel() == PermissionLevel.OWNER) {
+            return;
+        }
 
         if (!manager.isEnabled()) return;
         if (manager.isWhitelisted(server, auth, name)) return;
