@@ -1,8 +1,8 @@
-<p align="center">
+<p>
   <img src="src/main/resources/preview.png" alt="GateKeeper preview" width="256" />
 </p>
 
-<h1 align="center">GateKeeper</h1>
+<h1>GateKeeper</h1>
 
 Access control for Necesse multiplayer servers: whitelist players by SteamID or by name, manage the list via server commands, and enforce at connection time.
 
@@ -72,6 +72,7 @@ Whitelist file format (JSON):
 ```
 Notes:
 - `auth` is an array of SteamIDs (longs). Order is not significant.
+- If you edit `whitelist.json` manually while the server is running, use `/whitelist reload` to apply changes. If the file is invalid JSON, GateKeeper keeps the current settings and renames the broken file for review.
 
 ## How It Works
 - The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.

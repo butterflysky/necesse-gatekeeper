@@ -8,6 +8,7 @@ Note: This file is a helper draft for Steam Workshop upload. Copy/paste relevant
 - Easy admin workflow: `/whitelist enable`, then have players connect once and `/whitelist approve-last`.
 - Emergency lockdown mode and rate‑limited notices.
 - Back up your world before enabling.
+- If you edit `whitelist.json` outside the game, run `/whitelist reload` to apply changes. On parse errors, the current settings stay active and the broken file is backed up.
 
 Strongly recommended: Back up your world before enabling the whitelist for the first time. Turning on a whitelist without entries can lock out players (and you) until SteamIDs are added.
 
