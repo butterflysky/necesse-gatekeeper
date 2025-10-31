@@ -46,8 +46,17 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         long auth = c.authentication;
         String name = c.getName();
 
-        // Always allow the server owner to connect regardless of whitelist/lockdown
-        if (c.getPermissionLevel() == PermissionLevel.OWNER) {
+        // Admins/Owners bypass whitelist and get auto-added for future access
+        boolean isPrivileged = c.getPermissionLevel().getLevel() >= PermissionLevel.ADMIN.getLevel();
+        if (isPrivileged) {
+            if (!manager.isWhitelisted(server, auth, name)) {
+                boolean added = manager.addAuth(server, auth);
+                if (added) {
+                    manager.logAdminAction(server, "auto_add_privileged_on_join," + auth + "," + (name == null ? "" : name));
+                }
+            }
+            String status = manager.isEnabled() ? "ENABLED" : "DISABLED";
+            c.sendPacket(new PacketChatMessage("[GateKeeper] Whitelist is " + status + ". Use /whitelist help"));
             return;
         }
 
