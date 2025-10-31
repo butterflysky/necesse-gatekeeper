@@ -56,8 +56,14 @@ Notes:
 Whitelist file format (text):
 ```
 enabled=true
+lockdown=false
 auth:76561198000000000
+auth:76561198000000001
+auth:76561198000000002
 ```
+Notes:
+- Add one `auth:` line per SteamID.
+- Order is not significant.
 
 ## How It Works
 - The Necesse client sends an `auth` long during connect (Steam builds use SteamID). The server calls `Server.addClient(...)` and fires `ServerClientConnectedEvent`.

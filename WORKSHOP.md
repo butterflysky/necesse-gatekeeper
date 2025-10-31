@@ -49,6 +49,8 @@ Notes:
     enabled=true
     lockdown=false
     auth:76561198000000000
+    auth:76561198000000001
+    auth:76561198000000002
     ```
   - `denied_log.txt`: timestamped denied connect attempts
   - `admin_log.txt`: timestamped admin actions (e.g., kicks on removal)
