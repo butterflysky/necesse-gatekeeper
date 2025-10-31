@@ -13,6 +13,7 @@ import necesse.engine.commands.parameterHandlers.RestStringParameterHandler;
 import necesse.engine.network.client.Client;
 import necesse.engine.network.server.Server;
 import necesse.engine.network.server.ServerClient;
+import necesse.engine.network.packet.PacketDisconnect;
 
 public class WhitelistCommand extends ModularChatCommand {
     private final WhitelistManager manager;
@@ -155,18 +156,38 @@ public class WhitelistCommand extends ModularChatCommand {
             long auth = Long.parseLong(token);
             boolean removed = manager.removeAuth(server, auth);
             logs.add((removed ? "Removed" : "Not present") + " auth: " + auth);
+            if (removed) {
+                // Kick connected clients with this auth
+                for (int i = 0; i < server.getSlots(); i++) {
+                    ServerClient c = server.getClient(i);
+                    if (c != null && c.authentication == auth) {
+                        server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, "Removed from whitelist"));
+                    }
+                }
+            }
         } catch (NumberFormatException nfe) {
             boolean removed = manager.removeName(server, token);
             logs.add((removed ? "Removed" : "Not present") + " name: " + token);
+            if (removed) {
+                // Kick connected clients matching this name who are no longer whitelisted
+                for (int i = 0; i < server.getSlots(); i++) {
+                    ServerClient c = server.getClient(i);
+                    if (c != null && c.getName() != null && c.getName().equalsIgnoreCase(token)) {
+                        boolean stillAllowed = manager.isWhitelisted(server, c.authentication, c.getName());
+                        if (!stillAllowed) {
+                            server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, "Removed from whitelist"));
+                        }
+                    }
+                }
+            }
         }
     }
 
     private void printHelp(CommandLog logs) {
         logs.add("/whitelist enable|disable|status|lockdown [on|off|status]");
         logs.add("/whitelist list|online|recent|approve-last|export");
-        logs.add("/whitelist add <auth|name>");
-        logs.add("/whitelist remove <auth|name>");
-        logs.add("/whitelist approve <auth|name> | deny <auth|name>");
+        logs.add("/whitelist add <auth|name> (approve is alias)");
+        logs.add("/whitelist remove <auth|name> (deny is alias)");
         logs.add("/whitelist recent approve <index>");
     }
 }
