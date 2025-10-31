@@ -213,7 +213,13 @@ task buildModJar(type: Jar) {
     into 'resources'
   }
   // Add the dependencies
-  from configurations.libDepends.collect { it.isDirectory() ? it : zipTree(it) }
+  from (configurations.libDepends.collect { it.isDirectory() ? it : zipTree(it) }) {
+    // Exclude module descriptors and multi-release classes that confuse the game mod loader
+    exclude 'module-info.class'
+    exclude 'META-INF/versions/**'
+    // Drop signature files from shaded deps
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+  }
 
     archiveFileName.set("${jarName}.jar")
     destinationDirectory.set(file(buildLocation))
