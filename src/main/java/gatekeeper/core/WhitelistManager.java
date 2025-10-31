@@ -42,7 +42,6 @@ public class WhitelistManager {
     // in-memory rate limit for notifications (auth -> lastMillis)
     private final Map<Long, Long> lastNotify = new HashMap<>();
     private long lastGlobalNotify = 0L;
-    private static final long NOTIFY_COOLDOWN_PER_AUTH_MS = 60_000L;
     private static final long NOTIFY_GLOBAL_MIN_INTERVAL_MS = 3_000L;
 
     // recent denied attempts (most recent last)

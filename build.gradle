@@ -46,23 +46,18 @@ version = project.ext.modVersion
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        languageVersion = JavaLanguageVersion.of(25) // Latest as of now
+        // Match Necesse bundled JRE (17)
+        languageVersion = JavaLanguageVersion.of(17)
         vendor = JvmVendorSpec.ADOPTIUM
     }
-
-    // Compile to Java 8 bytecode for runtime compatibility while using a newer toolchain for compilation
-    // The Necesse game requires Java 8 bytecode as specified on the Necesse wiki.
-    sourceCompatibility = "$JavaVersion.VERSION_1_8"
-    targetCompatibility = "$JavaVersion.VERSION_1_8"
-
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
 }
 
 tasks.withType(JavaCompile).configureEach {
-    // If toolchain is used, this will instruct javac to output class files for Java 8
-    options.release.set(8)
+    // Ensure we compile targeting Java 17 bytecode
+    options.release.set(17)
     options.encoding = "UTF-8"
-    // Suppress warnings about obsolete Java 8 source/target options (until necesse devs decide to update the java version)
-    options.compilerArgs += ["-Xlint:-options"]
 }
 
 repositories {
@@ -122,6 +117,15 @@ dependencies {
 
     // Dev-only decompiler tool (not on compile or runtime classpaths)
     vineflower("org.vineflower:vineflower:1.11.1")
+
+    // Test dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.3'
+    testImplementation 'org.mockito:mockito-core:5.12.0'
+    testImplementation 'org.mockito:mockito-inline:5.2.0'
+    // Give tests access to game types
+    testImplementation files(gameDirectory + "/Necesse.jar")
 }
 
 task createAppID {
@@ -335,4 +339,16 @@ tasks.register('devSetup') {
     description = "Decompile, sync gameVersion, and publish to mavenLocal"
     dependsOn('decompileNecesseSourcesJar', 'updateGameVersion')
     finalizedBy('publishNecessePublicationToMavenLocal')
+}
+
+// ----------------------------------------------------------------------------
+// Tests configuration
+// ----------------------------------------------------------------------------
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    testLogging {
+        events "failed"
+        exceptionFormat "short"
+        showStandardStreams = false
+    }
 }
