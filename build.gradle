@@ -137,7 +137,12 @@ task createAppID {
     description = "Creates steam_appid.txt file"
 
     doLast {
-        file("steam_appid.txt").text = "1169040"
+        // Prefer the app id from the game installation if present; else write fallback
+        File appid = new File(gameDirectory, "steam_appid.txt")
+        if (!appid.exists()) {
+            // 1169040 is Necesse's Steam App ID; only used for local client dev runs
+            appid.text = "1169040"
+        }
     }
 }
 
@@ -173,6 +178,16 @@ task runClient(type: JavaExec) {
     dependsOn("buildModJar", "createAppID")
 
     classpath = files(gameDirectory + "/Necesse.jar")
+    workingDir = file(gameDirectory)
+    doFirst {
+        // Ensure Steam can detect app id when running outside Steam
+        File appid = new File(gameDirectory, "steam_appid.txt")
+        if (appid.exists()) {
+            environment "SteamAppId", appid.text.trim()
+        } else {
+            environment "SteamAppId", "1169040"
+        }
+    }
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev", "-mod \"${buildLocation}\""]
@@ -184,6 +199,15 @@ task runDevClient(type: JavaExec) {
     dependsOn("buildModJar", "createAppID")
 
     classpath = files(gameDirectory + "/Necesse.jar")
+    workingDir = file(gameDirectory)
+    doFirst {
+        File appid = new File(gameDirectory, "steam_appid.txt")
+        if (appid.exists()) {
+            environment "SteamAppId", appid.text.trim()
+        } else {
+            environment "SteamAppId", "1169040"
+        }
+    }
 
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev 1", "-mod \"${buildLocation}\""]
