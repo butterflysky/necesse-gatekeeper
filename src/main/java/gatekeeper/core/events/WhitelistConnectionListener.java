@@ -68,7 +68,7 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         // Disconnect with friendly message
         String reason = manager.isLockdown()
                 ? "Server is in lockdown. Please contact an admin."
-                : ("Not whitelisted. Ask an admin to run /whitelist approve " + auth + ".");
+                : ("Not whitelisted. Ask an admin to run /whitelist approve " + auth);
         server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, reason));
     }
 
