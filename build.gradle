@@ -130,6 +130,8 @@ dependencies {
     // Runtime JSON (bundled into mod jar via libDepends)
     libDepends 'com.google.code.gson:gson:2.13.2'
     testImplementation 'com.google.code.gson:gson:2.13.2'
+    // IDE convenience: let JDT LS resolve Gson without relying on custom config
+    compileOnly 'com.google.code.gson:gson:2.13.2'
 }
 
 task createModInfoFile(type: JavaExec) {
