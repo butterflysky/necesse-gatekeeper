@@ -18,7 +18,7 @@ Notes:
 - Run `./gradlew devSetup` to decompile Necesse into a sources JAR and publish game+sources to `mavenLocal`.
 - VS Code will auto‑attach sources for navigation. If it doesn’t:
   - Run “Java: Clean Java Language Server Workspace” and reopen the project.
-  - Run `./gradlew decompileNecesseSourcesJar publishNecessePublicationToMavenLocal` and reload Java projects.
+  - Run `./gradlew decompileNecesseSourcesJar publishNecesseToLocalMaven` and reload Java projects.
 
 ## Preview Image
 - Vector source: `resources/preview.svg` (1024×1024).
@@ -46,6 +46,11 @@ Notes:
 
 See also: AGENTS.md for deeper project guidance.
 
+## Minimal Mod Template
+- A reusable minimal Gradle template is available at `templates/minimal-mod/`.
+- Copy it to a new project and update the values at the top of `build.gradle` and `settings.gradle`.
+- Use `devSetup` and `publishNecesseToLocalMaven` for IDE source navigation and local publishing.
+
 ## Troubleshooting
 - VS Code sources not attached:
   - Clean Java LS workspace; re‑run devSetup; reload project.
@@ -53,4 +58,3 @@ See also: AGENTS.md for deeper project guidance.
   - Gradle tasks provide `SteamAppId` via environment; no file writes are required.
 - Packaging errors (module‑info):
   - The build excludes multi‑release `META‑INF/versions/**` and signature files when merging dependencies.
-

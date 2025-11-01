@@ -4,49 +4,27 @@ plugins {
     id 'eclipse'
 }
 
-// Change the values below this to your mods values
-// To change the project name, edit the settings.gradle file
-
-project.ext.modID = "gatekeeper" // The unique id of your mod. Must be all lowercase and cannot use special characters.
-project.ext.modName = "GateKeeper" // The display name of your mod.
-project.ext.modVersion = "1.1.0" // Your current builds version. Must follow the xx.xx... format.
-project.ext.gameVersion = "1.0.2" // The target game version.
-project.ext.modDescription = "A mod to enable access control for multiplayer servers." // Short description of what your mod is.
-project.ext.author = "butterflysky" // Your name
-
-/**
- * When setting clientside to true, it means servers do not need this mod for clients to connect and vice versa.
- * IMPORTANT: If you set this to true, make sure that your mod does not add any content or do anything
- * that could cause clients and servers to desync. This includes registering any items, objects, tiles, packets etc.
- */
+// Change the values below to your mod's values
+project.ext.modID = "examplemod"
+project.ext.modName = "Example Mod"
+project.ext.modVersion = "0.1.0"
+project.ext.gameVersion = "1.0.2"
+project.ext.modDescription = "Describe your mod here."
+project.ext.author = "YourName"
 project.ext.clientside = true
 
-/**
- * The other mod dependencies of this mod
- * Dependencies define the default load order of mods
- * Uncomment and configure these if your mod has dependencies
- */
-//project.ext.modDependencies = ["other.modid1", "other.modid2"]
-//project.ext.modOptionalDependencies = ["optional.modid1", "optional.modid2"]
+// Set this to your Necesse install directory
+def gameDirectory = System.getenv('NECESSE_DIR') ?: "/home/you/.steam/steam/steamapps/common/Necesse"
 
-// The path to the games install directory
-def gameDirectory = "/home/butterfly/.steam/steam/steamapps/common/Necesse"
-
-// =================================================
-// ========== DO NOT EDIT BELOW THIS LINE ==========
-// =================================================
-
-// Name of the jar
 def jarName = "${project.ext.modName.replace(" ", "")}-${project.ext.gameVersion}-${project.ext.modVersion}"
 def modOutputDir = file("$buildDir/mod")
+def buildLocation = "build/jar/"
 
 group = project.ext.modID
 version = project.ext.modVersion
 
-// Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
-        // Match Necesse bundled JRE (17)
         languageVersion = JavaLanguageVersion.of(17)
         vendor = JvmVendorSpec.ADOPTIUM
     }
@@ -55,7 +33,6 @@ java {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    // Ensure we compile targeting Java 17 bytecode
     options.release.set(17)
     options.encoding = "UTF-8"
 }
@@ -63,15 +40,11 @@ tasks.withType(JavaCompile).configureEach {
 repositories {
     mavenLocal()
     mavenCentral()
-    // For accessing snapshot artifacts if needed
-    maven {
-        url = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/')
-    }
+    maven { url = uri('https://s01.oss.sonatype.org/content/repositories/snapshots/') }
 }
 
 configurations {
     libDepends
-    // Dev-only tool configuration for Vineflower decompiler
     vineflower {
         visible = false
         canBeConsumed = false
@@ -79,28 +52,19 @@ configurations {
     }
 }
 
-// FIXED: Updated syntax for Gradle 9.1.0
 sourceSets {
     main {
-        java {
-            destinationDirectory.set(new File(modOutputDir, "classes"))
-        }
-       
+        java { destinationDirectory.set(new File(modOutputDir, "classes")) }
         output.resourcesDir = new File(modOutputDir, "resources")
-       
-        // Adds libDepends configuration to classpath
         compileClasspath += configurations.libDepends
     }
 }
 
-def buildLocation = "build/jar/"
-
 if (!file(gameDirectory + "/Necesse.jar").exists()) {
-    throw new Exception("Could not find game install directory. Make sure it is correct in build.gradle file.")
+    throw new Exception("Could not find game install directory. Set gameDirectory in build.gradle or NECESSE_DIR env var.")
 }
 
 dependencies {
-    // Prefer a local Maven coordinate for VS Code to auto-attach sources; fallback to direct file
     def m2Local = new File(System.getProperty('user.home'), ".m2/repository/local/necesse/necesse/${project.ext.gameVersion}/necesse-${project.ext.gameVersion}.jar")
     if (m2Local.exists()) {
         compileOnly "local.necesse:necesse:${project.ext.gameVersion}"
@@ -108,42 +72,21 @@ dependencies {
         compileOnly files(gameDirectory + "/Necesse.jar")
     }
     implementation fileTree(gameDirectory + "/lib/")
-    implementation fileTree("./mods/") // Add all mods located in local mods folder
+    implementation fileTree("./mods/")
 
-    // Add any third party library dependencies here. Remember to use libDepends, so that they will be added to your jar on build
-    // These are some examples:
-//    libDepends group: 'com.google.guava', name: 'guava', version: '31.1-jre'
-//    libDepends files("path/to/library/jar.jar")
-
-    // Dev-only decompiler tool (not on compile or runtime classpaths)
+    // Dev-only decompiler tool
     vineflower("org.vineflower:vineflower:1.11.1")
 
-    // Test dependencies
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.3'
-    testImplementation 'org.mockito:mockito-core:5.12.0'
-    testImplementation 'org.mockito:mockito-inline:5.2.0'
-    // Give tests access to game types
-    testImplementation files(gameDirectory + "/Necesse.jar")
-
-    // Runtime JSON (bundled into mod jar via libDepends)
-    libDepends 'com.google.code.gson:gson:2.13.2'
-    testImplementation 'com.google.code.gson:gson:2.13.2'
-    // IDE convenience: let JDT LS resolve Gson without relying on custom config
-    compileOnly 'com.google.code.gson:gson:2.13.2'
+    // Runtime JSON lib example (bundled into mod JAR via libDepends)
+    // libDepends 'com.google.code.gson:gson:2.13.2'
 }
 
 task createModInfoFile(type: JavaExec) {
     group = "necesse"
     description = "Creates the mod info file"
-
     classpath = files(gameDirectory + "/Necesse.jar")
-  doFirst {
-    new File(modOutputDir, "classes").mkdirs()
-  }
-
-  mainClass.set("CreateModInfoFile")
+    doFirst { new File(modOutputDir, "classes").mkdirs() }
+    mainClass.set("CreateModInfoFile")
     args = ["-file", "${modOutputDir}/classes/mod.info",
             "-id", "${project.ext.modID}",
             "-name", "${project.ext.modName}",
@@ -155,7 +98,7 @@ task createModInfoFile(type: JavaExec) {
             "-dependencies", project.ext.has("modDependencies") ? "[" + project.ext.modDependencies.join(", ") + "]" : "",
             "-optionalDependencies", project.ext.has("modOptionalDependencies") ? "[" + project.ext.modOptionalDependencies.join(", ") + "]" : ""]
 }
-// Makes compiling also create mod info file
+
 tasks.named('classes') {
     dependsOn("createModInfoFile")
 }
@@ -164,25 +107,18 @@ task runClient(type: JavaExec) {
     group = "necesse"
     description = "Run client with current mod"
     dependsOn("buildModJar")
-
     classpath = files(gameDirectory + "/Necesse.jar")
-    // Ensure Steam initializes in a consistent way without needing a file in CWD
     environment "SteamAppId", "1169040"
-    // No Steam App ID needed for build/tests; local client runs work without it in most cases
-
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev", "-mod \"${buildLocation}\""]
 }
 
 task runDevClient(type: JavaExec) {
     group = "necesse"
-    description = "Run client with current mod"
+    description = "Run client with current mod in dev mode"
     dependsOn("buildModJar")
-
     classpath = files(gameDirectory + "/Necesse.jar")
     environment "SteamAppId", "1169040"
-    // No Steam App ID needed for build/tests; local client runs work without it in most cases
-
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-dev 1", "-mod \"${buildLocation}\""]
 }
@@ -191,11 +127,7 @@ task runServer(type: JavaExec) {
     group = "necesse"
     description = "Run server with current mod"
     dependsOn("buildModJar")
-
-    // Include Server.jar and its libs on the classpath
     classpath = files(gameDirectory + "/Server.jar", fileTree(dir: gameDirectory + "/lib/"))
-
-    // Main class is defined in Server.jar manifest as StartDesktopServer
     mainClass.set("StartDesktopServer")
     jvmArgs = ["-Xms512m", "-Xmx4G", "-XX:+UnlockExperimentalVMOptions", "-XX:+UseG1GC", "-XX:G1NewSizePercent=20", "-XX:G1ReservePercent=20", "-XX:MaxGCPauseMillis=50", "-XX:G1HeapRegionSize=32M"]
     args = ["-mod \"${buildLocation}\""]
@@ -205,35 +137,19 @@ task buildModJar(type: Jar) {
     group = "necesse"
     description = "Generates the mod jar into the build folder"
     dependsOn("classes")
-
-    // No runtime cleanup to keep configuration cache compatible
-
-  // Add compiled classes and generated resources
-  from sourceSets.main.java.destinationDirectory.get()
-  // Add resources under 'resources/' prefix in JAR
-  from(sourceSets.main.output.resourcesDir) {
-    into 'resources'
-  }
-  // Add the dependencies
-  from (configurations.libDepends.collect { it.isDirectory() ? it : zipTree(it) }) {
-    // Exclude module descriptors and multi-release classes that confuse the game mod loader
-    exclude 'module-info.class'
-    exclude 'META-INF/versions/**'
-    // Drop signature files from shaded deps
-    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
-  }
-
+    from sourceSets.main.java.destinationDirectory.get()
+    from(sourceSets.main.output.resourcesDir) { into 'resources' }
+    from (configurations.libDepends.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude 'module-info.class'
+        exclude 'META-INF/versions/**'
+        exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+    }
     archiveFileName.set("${jarName}.jar")
     destinationDirectory.set(file(buildLocation))
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-// ----------------------------------------------------------------------------
-// Decompile Necesse.jar into a directory for IDE reference only (not compiled)
-// ----------------------------------------------------------------------------
-// No folder-based decompile; we generate a sources JAR instead.
-
-// New task: decompile directly into a sources JAR to avoid folder noise
+// ------------------- Dev: Decompilation & Publishing -------------------
 def sourcesOutDir = layout.buildDirectory.dir('necesse')
 tasks.register('decompileNecesseSourcesJar', Exec) { t ->
     group = "necesse"
@@ -249,18 +165,9 @@ tasks.register('decompileNecesseSourcesJar', Exec) { t ->
         if (outJar.absolutePath == inJar.absolutePath) {
             throw new GradleException("Refusing to overwrite Necesse.jar; destination equals source")
         }
-        commandLine = [ 'java', '-jar', vfJar.absolutePath,
-            '--file',
-            inJar.absolutePath,
-            outJar.absolutePath ]
+        commandLine = [ 'java', '-jar', vfJar.absolutePath, '--file', inJar.absolutePath, outJar.absolutePath ]
     }
 }
-
-// ----------------------------------------------------------------------------
-// Pack decompiled sources as a sources jar and publish Necesse to mavenLocal
-// ----------------------------------------------------------------------------
-
-// No packNecesseSources alias needed; decompileNecesseSourcesJar produces the sources JAR.
 
 publishing {
     publications {
@@ -268,40 +175,21 @@ publishing {
             groupId = 'local.necesse'
             artifactId = 'necesse'
             version = project.ext.gameVersion
-
-            // Main binary jar: point to the installed game jar
             artifact(file(gameDirectory + "/Necesse.jar"))
-
-            // Attach sources jar and ensure it's built first
             artifact(providers.provider { new File(sourcesOutDir.get().asFile, "necesse-${project.ext.gameVersion}-sources.jar") }) {
                 classifier = 'sources'
                 builtBy(tasks.named('decompileNecesseSourcesJar'))
             }
         }
     }
-    repositories {
-        mavenLocal()
-    }
+    repositories { mavenLocal() }
 }
 
-// Help JDT LS (VS Code) auto-attach sources when importing Gradle project
-eclipse {
-    classpath {
-        downloadSources = true
-    }
-}
+eclipse { classpath { downloadSources = true } }
 
-tasks.register('publishNecesseLocal') { t ->
-    group = "necesse"
-    description = "Publishes Necesse.jar and its sources to mavenLocal"
-    dependsOn('publishNecesseToLocalMaven')
-}
-
-// Ensure publication version matches the latest updated value at execution time
+// Keep publication version in sync at execution time
 tasks.named('publishNecessePublicationToMavenLocal') {
-    doFirst {
-        publishing.publications.necesse.version = project.ext.gameVersion
-    }
+    doFirst { publishing.publications.necesse.version = project.ext.gameVersion }
 }
 
 // Friendly alias that avoids the verbose 'Publication' name
@@ -311,9 +199,6 @@ tasks.register('publishNecesseToLocalMaven') { t ->
     dependsOn('decompileNecesseSourcesJar', 'publishNecessePublicationToMavenLocal')
 }
 
-// ----------------------------------------------------------------------------
-// Update project.ext.gameVersion from decompiled GameInfo.java
-// ----------------------------------------------------------------------------
 tasks.register('updateGameVersion') { t ->
     group = "necesse"
     description = "Updates project.ext.gameVersion from decompiled GameInfo.java in the sources JAR"
@@ -331,11 +216,7 @@ tasks.register('updateGameVersion') { t ->
         def ver = m.group(1)
         def gradleFile = file('build.gradle')
         def gtxt = gradleFile.getText('UTF-8')
-        // If already up-to-date, exit gracefully
-        if (gtxt.contains("project.ext.gameVersion = \"${ver}\"")) {
-            println "project.ext.gameVersion already ${ver}"
-            return
-        }
+        if (gtxt.contains("project.ext.gameVersion = \"${ver}\"")) { println "project.ext.gameVersion already ${ver}"; return }
         def replaced = gtxt.replaceAll(/(project\.ext\.gameVersion\s*=\s*\")[^\"]+(\"\s*)/, "${'$'}1${ver}${'$'}2")
         if (gtxt == replaced) throw new GradleException("Did not update build.gradle; pattern not found")
         gradleFile.write(replaced, 'UTF-8')
@@ -343,9 +224,6 @@ tasks.register('updateGameVersion') { t ->
     }
 }
 
-// ----------------------------------------------------------------------------
-// Dev setup convenience task
-// ----------------------------------------------------------------------------
 tasks.register('devSetup') {
     group = "necesse"
     description = "Decompile, sync gameVersion, and publish to mavenLocal"
@@ -353,19 +231,9 @@ tasks.register('devSetup') {
     finalizedBy('publishNecesseToLocalMaven')
 }
 
-// ----------------------------------------------------------------------------
-// Tests configuration
-// ----------------------------------------------------------------------------
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    testLogging {
-        events "failed"
-        exceptionFormat "short"
-        showStandardStreams = false
-    }
 }
 
-// Make assembling the project produce the mod jar artifact
-tasks.named('assemble') {
-    dependsOn('buildModJar')
-}
+tasks.named('assemble') { dependsOn('buildModJar') }
+
