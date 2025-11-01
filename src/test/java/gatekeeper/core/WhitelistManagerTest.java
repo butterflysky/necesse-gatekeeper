@@ -156,6 +156,24 @@ class WhitelistManagerTest {
     }
 
     @Test
+    void nameCache_persistsAndResolvesBothWays() throws Exception {
+        Server server = mockServerForWorldPath(tempDir);
+        WhitelistManager mgr = new WhitelistManager();
+        // Simulate a denied attempt which should also update the cache
+        mgr.recordDeniedAttempt(server, 76561198056903463L, "Ferality", "1.2.3.4");
+
+        // New manager instance should load cache
+        WhitelistManager mgr2 = new WhitelistManager();
+        // Resolve by name (case-insensitive)
+        Long id = mgr2.findAuthByName(server, "ferality");
+        assertNotNull(id);
+        assertEquals(76561198056903463L, id.longValue());
+        // Resolve by auth to name
+        String name = mgr2.getNameByAuth(server, 76561198056903463L);
+        assertEquals("Ferality", name);
+    }
+
+    @Test
     void rateLimit_perAuthAndGlobal() throws Exception {
         WhitelistManager mgr = new WhitelistManager();
         long auth1 = 1L;

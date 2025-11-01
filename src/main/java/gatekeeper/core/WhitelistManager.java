@@ -36,6 +36,7 @@ public class WhitelistManager {
     // Per-world computed config path
     private File configDir;
     private File configFile;
+    private File nameCacheFile;
     private long currentWorldId = Long.MIN_VALUE;
 
     private final Set<Long> authIds = new HashSet<>();
@@ -60,6 +61,10 @@ public class WhitelistManager {
     private final LinkedList<Attempt> recent = new LinkedList<>();
     private static final int RECENT_MAX = 50;
 
+    // Cached bidirectional name/auth mapping (for ergonomics only)
+    private final Map<Long, String> authToName = new HashMap<>();
+    private final Map<String, Long> nameToAuth = new HashMap<>(); // lower-cased name -> auth
+
     /**
      * @return true if whitelist is enabled; when disabled all connects are allowed.
      */
@@ -83,6 +88,7 @@ public class WhitelistManager {
             configDir = new File(worldPath.getParentFile(), baseName + ".GateKeeper");
         }
         configFile = new File(configDir, "whitelist.json");
+        nameCacheFile = new File(configDir, "name_cache.json");
         currentWorldId = wid;
         loadInternal();
     }
@@ -93,11 +99,14 @@ public class WhitelistManager {
         if (!configDir.exists()) configDir.mkdirs();
         if (!configFile.exists()) {
             // No file present yet; keep defaults
+            // Still try to load name cache if present
+            loadNameCache();
             return;
         }
         try {
             WhitelistConfig cfg = readConfig(configFile);
             applyConfig(cfg);
+            loadNameCache();
         } catch (IOException | JsonSyntaxException e) {
             // Malformed or unreadable: keep defaults and rename broken file
             String renamed = renameBrokenConfig();
@@ -164,7 +173,9 @@ public class WhitelistManager {
                 return e.getKey();
             }
         }
-        return null;
+        // fallback to cached mapping
+        Long cached = nameToAuth.get(nlow);
+        return cached;
     }
 
     /** Resolve a SteamID to last-known player name (online preferred, else saved). */
@@ -176,6 +187,9 @@ public class WhitelistManager {
                 return c.getName();
             }
         }
+        // cached last-known name
+        String cached = authToName.get(auth);
+        if (cached != null) return cached;
         Map<Long, String> used = server.world.getUsedPlayerNames();
         return used.get(auth);
     }
@@ -250,6 +264,8 @@ public class WhitelistManager {
         Attempt a = new Attempt(System.currentTimeMillis(), auth, name, address);
         recent.addLast(a);
         while (recent.size() > RECENT_MAX) recent.removeFirst();
+        // Update name cache for ergonomics
+        rememberName(auth, name);
         // Append to log file
         if (configDir != null) {
             File log = new File(configDir, "denied_log.txt");
@@ -307,6 +323,58 @@ public class WhitelistManager {
             bw.write(System.currentTimeMillis() + "," + line + "\n");
         } catch (IOException ignore) {}
     }
+
+    // --- Name cache -------------------------------------------------------
+    /** Remember a last-known name for the given auth and persist cache. */
+    public synchronized void rememberName(long auth, String name) {
+        if (name == null || name.isEmpty()) return;
+        authToName.put(auth, name);
+        nameToAuth.put(name.toLowerCase(Locale.ENGLISH), auth);
+        saveNameCache();
+    }
+
+    private void loadNameCache() {
+        if (nameCacheFile == null) return;
+        if (!nameCacheFile.exists()) return;
+        try (BufferedReader br = new BufferedReader(new FileReader(nameCacheFile))) {
+            Gson gson = new Gson();
+            NameCache nc = gson.fromJson(br, NameCache.class);
+            if (nc != null) {
+                authToName.clear();
+                nameToAuth.clear();
+                if (nc.authNames != null) authToName.putAll(nc.authNames);
+                if (nc.names != null) {
+                    // Normalize to lowercase keys
+                    for (Map.Entry<String, Long> e : nc.names.entrySet()) {
+                        if (e.getKey() != null && e.getValue() != null) {
+                            nameToAuth.put(e.getKey().toLowerCase(Locale.ENGLISH), e.getValue());
+                        }
+                    }
+                }
+            }
+        } catch (IOException | JsonSyntaxException ignore) {
+            // Ignore cache errors silently; cache is best-effort
+        }
+    }
+
+    private void saveNameCache() {
+        if (configDir == null || nameCacheFile == null) return;
+        if (!configDir.exists()) configDir.mkdirs();
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter(nameCacheFile))) {
+            NameCache nc = new NameCache();
+            nc.authNames = new HashMap<>(authToName);
+            // Persist name->auth with lowercase keys
+            Map<String, Long> namesOut = new HashMap<>();
+            for (Map.Entry<String, Long> e : nameToAuth.entrySet()) {
+                if (e.getKey() != null && e.getValue() != null) {
+                    namesOut.put(e.getKey().toLowerCase(Locale.ENGLISH), e.getValue());
+                }
+            }
+            nc.names = namesOut;
+            Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+            bw.write(gson.toJson(nc));
+        } catch (IOException ignore) {}
+    }
 }
 
 /** Simple JSON structure for whitelist persistence. */
@@ -314,4 +382,12 @@ class WhitelistConfig {
     boolean enabled = false;
     boolean lockdown = false;
     java.util.List<Long> auth = new java.util.ArrayList<>();
+}
+
+/**
+ * Simple JSON structure for name cache persistence (ergonomics only; not authoritative).
+ */
+class NameCache {
+    java.util.Map<Long, String> authNames = new java.util.HashMap<>();
+    java.util.Map<String, Long> names = new java.util.HashMap<>();
 }

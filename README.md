@@ -10,7 +10,7 @@ Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 
 ## Features
 - Per‑world whitelist next to the world save (portable backups)
-- Auth‑only (SteamID64) access; names never grant access
+- Auth‑only (SteamID64) enforcement; names never grant access, but we cache name↔ID for ergonomics
 - Admin/owner quality of life:
   - Admins/owners bypass whitelist and are auto‑added on first join
   - One‑line join reminder: “Whitelist is ENABLED|DISABLED. Use /whitelist help”
@@ -22,7 +22,7 @@ Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 1) Subscribe on Steam Workshop, start the server.
 2) In‑game or server console:
    - Enable: `/whitelist enable`
-   - Recommended onboarding: have a new player connect once, then `/whitelist approve-last`
+   - Recommended onboarding: have a new player attempt to connect once, then `/whitelist approve-last` or `/whitelist approve <name>`
    - Lockdown during incidents: `/whitelist lockdown on` (suppresses admin notifications for denied connects and shows a “server is in lockdown” message to rejected clients; whitelist enforcement itself is unchanged)
 3) Admins/owners can always join and are auto‑added to the whitelist on first join.
 
@@ -36,19 +36,21 @@ Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=3597047967
 | `/whitelist disable` | Turn whitelist off (allow all). |
 | `/whitelist reload` | Reload config from disk; on parse error, keep current settings and rename the broken file. |
 | `/whitelist lockdown [on\|off\|status]` | Emergency mode: suppress admin notifications for denied connects and change the kick reason to “server is in lockdown”. Whitelist enforcement is unchanged. |
-| `/whitelist list` | List whitelisted SteamIDs (shows last‑known names when available). |
-| `/whitelist online` | List currently connected players with SteamIDs. |
-| `/whitelist recent` | Show last denied attempts (index, name, SteamID, age, address). |
+| `/whitelist list` | List whitelisted users by name (falls back to ID if unknown). |
+| `/whitelist online` | List currently connected players by name with permission levels. |
+| `/whitelist recent` | Show last denied attempts (index, name, age, address). |
 | `/whitelist recent approve <index>` | Approve one of the recent denied attempts. |
 | `/whitelist approve-last` | Approve the most recent denied attempt. |
-| `/whitelist add <SteamID or player name>` | Add a SteamID or resolve a known name to SteamID and add. |
-| `/whitelist remove <SteamID or player name>` | Remove a SteamID or resolve a known name and remove. |
+| `/whitelist add <SteamID or player name>` | Prefer names; we resolve to SteamID and persist it. |
+| `/whitelist remove <SteamID or player name>` | Prefer names; we resolve to SteamID and remove it. |
 
 Notes:
-- Adding by name only works if the player is online or has played on this world before; names are never stored for access.
-- On denied connection, admins/owners see a chat message with the auth (SteamID) and a suggested approval command.
+- Access is strictly by SteamID64. Names do not grant access. We persist a cached name↔ID mapping for convenience so you can operate by name, while the underlying whitelist remains IDs.
+- Adding by name works if the player is online, has played before on this world, or has attempted to connect (we cache last‑seen names on denied attempts).
+- On denied connection, admins/owners see a message like: “Connection blocked for non‑whitelisted user: <name> — approve with /whitelist approve <name> or /whitelist approve‑last”.
 - Autocomplete/typeahead may not appear on clients without the mod; `/whitelist` still works because the server parses it.
 - Admins/owners can always join even if not whitelisted; on first join they are auto‑added and see a reminder.
+ - `/whitelist recent` displays up to the last 10 attempts. Use the printed index numbers with `recent approve <index>`.
 
 ## Configuration (Per‑World)
 - Directory world: `<worldDir>/GateKeeper/whitelist.json`
@@ -70,17 +72,20 @@ Tips:
 - `auth` is an array of SteamIDs (longs). Order is not significant.
 - If you edit `whitelist.json` while the server is running, use `/whitelist reload`. On invalid JSON, the server keeps the current settings and backs up the broken file.
 
+Additional files (ergonomics):
+- `<world>/GateKeeper/name_cache.json` — cached last‑known names for SteamIDs and last‑seen name→ID mappings to support approving by name and pretty‑printing lists. This file is best‑effort and can be deleted safely; it does not affect enforcement.
+
 ## How It Works
 - On connect, the server receives the client’s SteamID64 (auth) and fires a connect event.
 - GateKeeper enforces access:
   - Whitelist disabled: allow all
   - Whitelist enabled: allow whitelisted users or ADMIN/OWNER (privileged users are auto‑added)
   - Otherwise: record a denied attempt and kick with a friendly reason
-- Denied attempts are written to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval.
+- Denied attempts are written to `<world>/GateKeeper/denied_log.txt` and kept in memory for quick approval. Each attempt also updates the name cache so you can approve by name.
 
 Security/Integrity:
-- On Steam, `auth` is sourced from Steam and is the correct identifier to trust.
-- Names are convenience only; prefer SteamID for durability.
+- On Steam, `auth` is the trusted identifier. Whitelist enforcement is ID‑based only.
+- Names are cached for convenience and may collide; commands prefer names but persist IDs.
 
 ## Issues & Support
 - GitHub: https://github.com/butterflysky/necesse-gatekeeper

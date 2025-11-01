@@ -66,7 +66,7 @@ public class WhitelistCommand extends ModularChatCommand {
                 break;
             case "status":
                 logs.add("Whitelist is " + (manager.isEnabled() ? "ENABLED" : "DISABLED"));
-                logs.add("Auth IDs: " + manager.listAuths(server).size());
+                logs.add("Entries: " + manager.listAuths(server).size());
                 break;
             case "reload":
                 StringBuilder sb = new StringBuilder();
@@ -76,10 +76,14 @@ public class WhitelistCommand extends ModularChatCommand {
             case "list":
                 List<Long> auths = manager.listAuths(server);
                 Collections.sort(auths);
-                logs.add("Auth IDs (" + auths.size() + "):");
+                logs.add("Whitelisted users (" + auths.size() + "):");
                 for (Long a : auths) {
                     String nm = manager.getNameByAuth(server, a);
-                    logs.add(" - " + a + (nm != null ? (" => " + nm) : ""));
+                    if (nm != null && !nm.isEmpty()) {
+                        logs.add(" - " + nm);
+                    } else {
+                        logs.add(" - <unknown> (" + a + ")");
+                    }
                 }
                 break;
             case "lockdown":
@@ -99,7 +103,8 @@ public class WhitelistCommand extends ModularChatCommand {
                 for (int i = 0; i < server.getSlots(); i++) {
                     ServerClient c = server.getClient(i);
                     if (c != null) {
-                        logs.add("#" + (i + 1) + ": " + c.getName() + " (" + c.authentication + ") perm=" + c.getPermissionLevel());
+                        String nm = c.getName();
+                        logs.add("#" + (i + 1) + ": " + (nm == null || nm.isEmpty() ? "<unknown>" : nm) + " perm=" + c.getPermissionLevel());
                     }
                 }
                 break;
@@ -109,9 +114,11 @@ public class WhitelistCommand extends ModularChatCommand {
                         int idx = Integer.parseInt(parts[2]);
                         java.util.List<gatekeeper.core.WhitelistManager.Attempt> list = manager.getRecentAttempts();
                         if (idx < 1 || idx > list.size()) { logs.add("Index out of range"); break; }
-                        long authIdx = list.get(idx - 1).auth;
+                        gatekeeper.core.WhitelistManager.Attempt at = list.get(idx - 1);
+                        long authIdx = at.auth;
                         boolean addedIdx = manager.addAuth(server, authIdx);
-                        logs.add((addedIdx ? "Approved" : "Already whitelisted") + " auth: " + authIdx);
+                        String who = at.name == null || at.name.isEmpty() ? ("<unknown> (" + authIdx + ")") : at.name;
+                        logs.add((addedIdx ? "Approved" : "Already whitelisted") + ": " + who);
                         break;
                     } catch (NumberFormatException ex) {
                         logs.add("Usage: /whitelist recent approve <index>");
@@ -125,7 +132,8 @@ public class WhitelistCommand extends ModularChatCommand {
                 for (int i = start; i < list.size(); i++) {
                     gatekeeper.core.WhitelistManager.Attempt a = list.get(i);
                     long ageSec = (System.currentTimeMillis() - a.timeMs) / 1000;
-                    logs.add((i + 1) + ". " + (a.name == null ? "<unknown>" : a.name) + " (" + a.auth + ") " + ageSec + "s ago " + (a.address == null ? "" : ("[" + a.address + "]")));
+                    String who = (a.name == null || a.name.isEmpty()) ? "<unknown>" : a.name;
+                    logs.add((i + 1) + ". " + who + " " + ageSec + "s ago " + (a.address == null ? "" : ("[" + a.address + "]")));
                     shown++;
                 }
                 logs.add("Shown " + shown + "/" + list.size() + ". Use '/whitelist recent approve <index>' to approve.");
@@ -134,7 +142,9 @@ public class WhitelistCommand extends ModularChatCommand {
                 Long last = manager.getLastDeniedAuth();
                 if (last == null) { logs.add("No recent denied attempts."); break; }
                 boolean addedLast = manager.addAuth(server, last);
-                logs.add((addedLast ? "Approved" : "Already whitelisted") + " last auth: " + last);
+                String whoLast = manager.getNameByAuth(server, last);
+                String whoText = (whoLast == null || whoLast.isEmpty()) ? ("<unknown> (" + last + ")") : whoLast;
+                logs.add((addedLast ? "Approved" : "Already whitelisted") + ": " + whoText);
                 break;
             case "export":
                 int count = manager.exportKnownPlayers(server);
@@ -161,12 +171,16 @@ public class WhitelistCommand extends ModularChatCommand {
         try {
             long auth = Long.parseLong(token);
             boolean added = manager.addAuth(server, auth);
-            logs.add((added ? "Added" : "Already present") + " auth: " + auth);
+            String who = manager.getNameByAuth(server, auth);
+            String out = (who == null || who.isEmpty()) ? ("(" + auth + ")") : who;
+            logs.add((added ? "Added" : "Already present") + ": " + out);
         } catch (NumberFormatException nfe) {
             Long auth = manager.findAuthByName(server, token);
             if (auth != null) {
                 boolean added = manager.addAuth(server, auth);
-                logs.add((added ? "Added" : "Already present") + " auth from name \"" + token + "\": " + auth);
+                // Remember the exact input casing as last-known name
+                manager.rememberName(auth, token);
+                logs.add((added ? "Added" : "Already present") + ": " + token);
             } else {
                 logs.add("Could not resolve name '" + token + "' to a SteamID. Ask them to connect once or provide their SteamID.");
             }
@@ -181,7 +195,9 @@ public class WhitelistCommand extends ModularChatCommand {
         }
         if (authToRemove == null) { logs.add("Could not resolve '" + token + "' to a SteamID"); return; }
         boolean removed = manager.removeAuth(server, authToRemove);
-        logs.add((removed ? "Removed" : "Not present") + " auth: " + authToRemove);
+        String who = manager.getNameByAuth(server, authToRemove);
+        String out = (who == null || who.isEmpty()) ? ("(" + authToRemove + ")") : who;
+        logs.add((removed ? "Removed" : "Not present") + ": " + out);
         if (removed) {
             for (int i = 0; i < server.getSlots(); i++) {
                 ServerClient c = server.getClient(i);
@@ -198,8 +214,8 @@ public class WhitelistCommand extends ModularChatCommand {
     private void printHelp(CommandLog logs) {
         logs.add("/whitelist enable|disable|status|reload|lockdown [on|off|status]");
         logs.add("/whitelist list|online|recent|approve-last|export");
-        logs.add("/whitelist add <auth|name> (name resolves to auth if known)");
-        logs.add("/whitelist remove <auth|name> (deny is alias; removing by name resolves to auth)");
+        logs.add("/whitelist add <auth|name> (prefer name; we resolve to SteamID)");
+        logs.add("/whitelist remove <auth|name> (deny alias; prefer name)");
         logs.add("/whitelist recent approve <index>");
     }
 }

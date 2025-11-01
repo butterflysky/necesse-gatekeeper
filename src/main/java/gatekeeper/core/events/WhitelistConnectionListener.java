@@ -55,6 +55,8 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
                     manager.logAdminAction(server, "auto_add_privileged_on_join," + auth + "," + (name == null ? "" : name));
                 }
             }
+            // Remember name for ergonomics
+            manager.rememberName(auth, name);
             String status = manager.isEnabled() ? "ENABLED" : "DISABLED";
             c.sendPacket(new PacketChatMessage("[GateKeeper] Whitelist is " + status + ". Use /whitelist help"));
             return;
@@ -63,14 +65,15 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         if (!manager.isEnabled()) return;
         if (manager.isWhitelisted(server, auth, name)) return;
 
-        // Record attempt (for recent + log)
+        // Record attempt (for recent + log + name cache)
         String address = c.networkInfo == null ? null : c.networkInfo.getDisplayName();
         manager.recordDeniedAttempt(server, auth, name, address);
 
         // Notify admins/owners with rate limit unless in lockdown
         if (!manager.isLockdown() && manager.shouldNotify(auth, NOTIFY_COOLDOWN_MS)) {
-            String msg = "[GateKeeper] Non-whitelisted connect: " + name + " (" + auth + ")" +
-                    " — approve with /whitelist approve " + auth + " or /whitelist approve-last";
+            String who = (name == null || name.isEmpty()) ? "<unknown>" : name;
+            String msg = "[GateKeeper] Connection blocked for non-whitelisted user: " + who +
+                    " — approve with /whitelist approve " + who + " or /whitelist approve-last";
             for (int i = 0; i < server.getSlots(); i++) {
                 ServerClient admin = server.getClient(i);
                 if (admin != null && admin.getPermissionLevel().getLevel() >= necesse.engine.commands.PermissionLevel.ADMIN.getLevel()) {
@@ -81,9 +84,10 @@ public class WhitelistConnectionListener implements GameEventInterface<ServerCli
         }
 
         // Disconnect with friendly message
+        String who = (name == null || name.isEmpty()) ? "you" : name;
         String reason = manager.isLockdown()
                 ? "Server is in lockdown. Please contact an admin."
-                : ("Not whitelisted. Ask an admin to run /whitelist approve " + auth);
+                : ("Not whitelisted. Ask an admin to run /whitelist approve " + who);
         server.disconnectClient(c, PacketDisconnect.kickPacket(c.slot, reason));
     }
 
