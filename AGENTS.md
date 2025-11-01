@@ -27,7 +27,8 @@ This document prepares future AI agents and contributors to work on this codebas
   - Zip world: `<parent>/<worldName>.GateKeeper/`.
 
 ## Whitelist Design (Authoritative)
-- Access is auth-only (SteamID64). Names are never stored for access or persisted in `whitelist.json`.
+- Access is auth-only (SteamID64). Names never grant access and are not stored in `whitelist.json`.
+- Ergonomics cache: We persist last‑seen name↔ID mappings in `name_cache.json` (per world) to enable approving by name and pretty printing. This cache is non‑authoritative and safe to delete.
 - `whitelist.json` format (auth-only):
   - `enabled`: boolean
   - `lockdown`: boolean
@@ -38,17 +39,21 @@ This document prepares future AI agents and contributors to work on this codebas
   - Admin anti-noise: per-auth and global notification cooldowns.
   - Denied attempts: recorded in memory + append-only `denied_log.txt`.
   - Remove: kicks connected client(s) and logs to `admin_log.txt`.
-- Name convenience: Allowed only to resolve to an auth using online clients or saved players. If unknown, instruct the admin to have the player connect once or provide SteamID.
+- Name convenience: Resolve to an auth using (in order) online clients, saved players, then the cached mapping (updated on denied attempts). If unknown, instruct the admin to have the player connect once or provide SteamID.
 
 ## Commands (Summary)
 - `/whitelist enable|disable|status` — toggle/inspect.
 - `/whitelist lockdown [on|off|status]` — emergency mode.
-- `/whitelist list` — lists SteamIDs (shows last-known names when available).
-- `/whitelist online` — current players (SteamIDs).
-- `/whitelist recent` — recent denied attempts; `recent approve <index>`; `approve-last`.
-- `/whitelist add <auth|name>` — name resolves to auth if known.
-- `/whitelist remove <auth|name>` — name resolves to auth; kicks connected, logs.
+- `/whitelist list` — lists whitelisted users by name (falls back to ID if unknown).
+- `/whitelist online` — current players by name with permission levels.
+- `/whitelist recent` — last denied attempts (up to 10 shown) with index, name, age, address; use `recent approve <index>`; also `approve-last`.
+- `/whitelist add <auth|name>` — prefer name; resolves to auth and persists the ID.
+- `/whitelist remove <auth|name>` — prefer name; resolves to auth; kicks connected, logs.
 - `/whitelist export` — writes saved players (SteamID,name) to `known_players.txt`.
+
+Admin notification verbiage:
+- On denied connect (non-lockdown):
+  `Connection blocked for non-whitelisted user: <name> — approve with /whitelist approve <name> or /whitelist approve-last`
 
 ## Tests
 - Unit tests use JUnit 5 + Mockito inline.
@@ -69,7 +74,9 @@ This document prepares future AI agents and contributors to work on this codebas
 ## Do / Don’t
 - Do:
   - Keep auth-only invariant — do not reintroduce name-based access.
+  - Maintain the name↔ID cache (`name_cache.json`) as best-effort ergonomics; never use it for enforcement.
   - Update README and Javadocs when behavior changes.
+  - Update CHANGELOG and bump `modVersion` in `build.gradle` for user-facing changes.
   - Log admin actions and denied attempts.
   - Respect per-world path rules (dir vs zip worlds).
 - Don’t:
