@@ -4,23 +4,20 @@ plugins {
     id 'eclipse'
 }
 
-// Project identifiers
-project.ext.modID = "gatekeeper"
-project.ext.modName = "GateKeeper"
-project.ext.modVersion = "1.1.0"
+// Change the values below to your mod's values
+project.ext.modID = "examplemod"
+project.ext.modName = "Example Mod"
+project.ext.modVersion = "0.1.0"
 project.ext.gameVersion = "1.0.2"
-project.ext.modDescription = "A mod to enable access control for multiplayer servers."
-project.ext.author = "butterflysky"
+project.ext.modDescription = "Describe your mod here."
+project.ext.author = "YourName"
 project.ext.clientside = true
-// Uncomment if needed for load order
-// project.ext.modDependencies = ["other.modid1", "other.modid2"]
-// project.ext.modOptionalDependencies = ["optional.modid1", "optional.modid2"]
 
-// Auto-discover Necesse installation
+// Auto-discover Necesse game directory from Steam libraries
 import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 
 def findNecesseGameDirectory() {
-    // Environment variable override
+    // First check environment variable override
     def envDir = System.getenv('NECESSE_DIR')
     if (envDir) {
         def dir = file(envDir)
@@ -32,7 +29,7 @@ def findNecesseGameDirectory() {
         }
     }
 
-    // gradle.properties override (set necesseGameDir=/path)
+    // Check gradle.properties override
     if (project.hasProperty('necesseGameDir')) {
         def dir = file(project.property('necesseGameDir'))
         if (dir.exists() && new File(dir, "Necesse.jar").exists()) {
@@ -45,37 +42,42 @@ def findNecesseGameDirectory() {
     def userHome = System.getProperty('user.home')
     def steamLibraryPaths = []
 
+    // Platform-specific Steam installation paths
     if (os.isWindows()) {
+        // Windows
         steamLibraryPaths += [
             'C:\\Program Files (x86)\\Steam',
             'C:\\Program Files\\Steam',
             "${userHome}\\Documents\\Steam"
         ]
     } else if (os.isMacOsX()) {
+        // macOS
         steamLibraryPaths += [
             "${userHome}/Library/Application Support/Steam"
         ]
     } else if (os.isLinux()) {
+        // Linux
         steamLibraryPaths += [
             "${userHome}/.steam/steam",
             "${userHome}/.local/share/Steam",
-            "${userHome}/.var/app/com.valvesoftware.Steam/.local/share/Steam"
+            "${userHome}/.var/app/com.valvesoftware.Steam/.local/share/Steam" // Flatpak
         ]
     }
 
+    // Check each Steam library for Necesse
     def necessePath = 'steamapps/common/Necesse'
     for (def steamPath : steamLibraryPaths) {
         def steamDir = file(steamPath)
         if (!steamDir.exists()) continue
 
-        // Main library
+        // Check main library
         def gameDir = file("${steamPath}/${necessePath}")
         if (gameDir.exists() && new File(gameDir, "Necesse.jar").exists()) {
             println "Found Necesse at: ${gameDir.absolutePath}"
             return gameDir.absolutePath
         }
 
-        // Additional libraries via libraryfolders.vdf
+        // Parse libraryfolders.vdf for additional Steam library locations
         def vdfFile = file("${steamPath}/steamapps/libraryfolders.vdf")
         if (vdfFile.exists()) {
             vdfFile.eachLine { line ->
@@ -92,14 +94,11 @@ def findNecesseGameDirectory() {
         }
     }
 
+    // Fallback: return null to trigger error below
     return null
 }
 
 def gameDirectory = findNecesseGameDirectory()
-
-// =================================================
-// ========== DO NOT EDIT BELOW THIS LINE ==========
-// =================================================
 
 def jarName = "${project.ext.modName.replace(" ", "")}-${project.ext.gameVersion}-${project.ext.modVersion}"
 def modOutputDir = file("$buildDir/mod")
@@ -108,7 +107,6 @@ def buildLocation = "build/jar/"
 group = project.ext.modID
 version = project.ext.modVersion
 
-// Java toolchain (Necesse bundles Java 17)
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(17)
@@ -131,7 +129,6 @@ repositories {
 
 configurations {
     libDepends
-    // Dev-only decompiler tool configuration
     vineflower {
         visible = false
         canBeConsumed = false
@@ -143,17 +140,15 @@ sourceSets {
     main {
         java { destinationDirectory.set(new File(modOutputDir, "classes")) }
         output.resourcesDir = new File(modOutputDir, "resources")
-        // Add libDepends to classpath so shaded libs are visible at compile time
         compileClasspath += configurations.libDepends
     }
 }
 
 if (!file(gameDirectory + "/Necesse.jar").exists()) {
-    throw new Exception("Could not find game install directory. Set NECESSE_DIR env var or necesseGameDir in gradle.properties.")
+    throw new Exception("Could not find game install directory. Set gameDirectory in build.gradle or NECESSE_DIR env var.")
 }
 
 dependencies {
-    // Attach Necesse.jar as provided (compileOnly) with optional mavenLocal coordinates for IDEs
     def m2Local = new File(System.getProperty('user.home'), ".m2/repository/local/necesse/necesse/${project.ext.gameVersion}/necesse-${project.ext.gameVersion}.jar")
     if (m2Local.exists()) {
         compileOnly "local.necesse:necesse:${project.ext.gameVersion}"
@@ -161,25 +156,13 @@ dependencies {
         compileOnly files(gameDirectory + "/Necesse.jar")
     }
     implementation fileTree(gameDirectory + "/lib/")
-    implementation fileTree("./mods/") // local mods on classpath
+    implementation fileTree("./mods/")
 
-    // Dev-only decompiler tool (not on compile/runtime classpaths)
+    // Dev-only decompiler tool
     vineflower("org.vineflower:vineflower:1.11.1")
 
-    // Runtime JSON (bundled into mod jar via libDepends)
-    libDepends 'com.google.code.gson:gson:2.13.2'
-    // IDE convenience + tests
-    compileOnly 'com.google.code.gson:gson:2.13.2'
-    testImplementation 'com.google.code.gson:gson:2.13.2'
-
-    // Tests
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.10.3'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.10.3'
-    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.3'
-    testImplementation 'org.mockito:mockito-core:5.12.0'
-    testImplementation 'org.mockito:mockito-inline:5.2.0'
-    // Give tests access to game types
-    testImplementation files(gameDirectory + "/Necesse.jar")
+    // Runtime JSON lib example (bundled into mod JAR via libDepends)
+    // libDepends 'com.google.code.gson:gson:2.13.2'
 }
 
 task createModInfoFile(type: JavaExec) {
@@ -200,7 +183,9 @@ task createModInfoFile(type: JavaExec) {
             "-optionalDependencies", project.ext.has("modOptionalDependencies") ? "[" + project.ext.modOptionalDependencies.join(", ") + "]" : ""]
 }
 
-tasks.named('classes') { dependsOn("createModInfoFile") }
+tasks.named('classes') {
+    dependsOn("createModInfoFile")
+}
 
 task runClient(type: JavaExec) {
     group = "necesse"
@@ -288,7 +273,7 @@ eclipse { classpath { downloadSources = true } }
 
 // Keep publication version in sync at execution time
 tasks.named('publishNecessePublicationToMavenLocal') {
-    def gameVersionValue = project.ext.gameVersion
+    def gameVersionValue = project.ext.gameVersion  // Capture at configuration time
     doFirst { publishing.publications.necesse.version = gameVersionValue }
 }
 
@@ -303,7 +288,7 @@ tasks.register('updateGameVersion') { t ->
     group = "necesse"
     description = "Updates project.ext.gameVersion from decompiled GameInfo.java in the sources JAR"
     dependsOn('decompileNecesseSourcesJar')
-    def gameVersionValue = project.ext.gameVersion
+    def gameVersionValue = project.ext.gameVersion  // Capture at configuration time
     doLast {
         def sourcesJar = new File(sourcesOutDir.get().asFile, "necesse-${gameVersionValue}-sources.jar")
         if (!sourcesJar.exists()) throw new GradleException("Sources JAR not found. Run decompileNecesseSourcesJar.")
@@ -334,11 +319,6 @@ tasks.register('devSetup') {
 
 tasks.withType(Test).configureEach {
     useJUnitPlatform()
-    testLogging {
-        events "failed"
-        exceptionFormat "short"
-        showStandardStreams = false
-    }
 }
 
 tasks.named('assemble') { dependsOn('buildModJar') }
