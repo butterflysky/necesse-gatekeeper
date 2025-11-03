@@ -2,11 +2,6 @@
 
 All notable changes to GateKeeper will be documented in this file.
 
-## Unreleased
-
-- Build: Added `templates/minimal-mod/` — a minimal Gradle template for new Necesse mods, including Vineflower decompilation, local Maven publishing, and run tasks.
-- Build: Added friendly alias task `publishNecesseToLocalMaven` (avoids the verbose Gradle-generated `publish...Publication...` name). `devSetup` now finalizes with this alias.
-
 ## 1.1.0 – Name-first approvals and UX
 
 - Feature: Approve by player name. The server now caches a bidirectional mapping between last-seen names and SteamIDs to allow commands like `/whitelist approve <name>` and to pretty-print lists.
@@ -21,3 +16,4 @@ All notable changes to GateKeeper will be documented in this file.
 
 Notes:
 - Security/integrity is unchanged: only SteamIDs in `whitelist.json` grant access. Names may collide; the cache is purely for convenience.
+

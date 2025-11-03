@@ -294,7 +294,7 @@ eclipse {
 tasks.register('publishNecesseLocal') { t ->
     group = "necesse"
     description = "Publishes Necesse.jar and its sources to mavenLocal"
-    dependsOn('publishNecesseToLocalMaven')
+    dependsOn('decompileNecesseSourcesJar', 'publishNecessePublicationToMavenLocal')
 }
 
 // Ensure publication version matches the latest updated value at execution time
@@ -302,13 +302,6 @@ tasks.named('publishNecessePublicationToMavenLocal') {
     doFirst {
         publishing.publications.necesse.version = project.ext.gameVersion
     }
-}
-
-// Friendly alias that avoids the verbose 'Publication' name
-tasks.register('publishNecesseToLocalMaven') { t ->
-    group = "necesse"
-    description = "Publishes Necesse.jar and its sources to mavenLocal"
-    dependsOn('decompileNecesseSourcesJar', 'publishNecessePublicationToMavenLocal')
 }
 
 // ----------------------------------------------------------------------------
@@ -350,7 +343,7 @@ tasks.register('devSetup') {
     group = "necesse"
     description = "Decompile, sync gameVersion, and publish to mavenLocal"
     dependsOn('decompileNecesseSourcesJar', 'updateGameVersion')
-    finalizedBy('publishNecesseToLocalMaven')
+    finalizedBy('publishNecessePublicationToMavenLocal')
 }
 
 // ----------------------------------------------------------------------------
