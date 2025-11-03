@@ -2,6 +2,11 @@
 
 All notable changes to GateKeeper will be documented in this file.
 
+## 1.1.1 – Fix: name cache lookups
+
+- Fix: Ensure per-world state and `name_cache.json` are initialized before name lookups. This resolves a case where a fresh manager instance could not resolve names from the persisted cache, causing `/whitelist approve <name>` and related name-based conveniences to fail after restart.
+- Tests: Added coverage implicitly through existing `nameCache_persistsAndResolvesBothWays` test, which now passes.
+
 ## 1.1.0 – Name-first approvals and UX
 
 - Feature: Approve by player name. The server now caches a bidirectional mapping between last-seen names and SteamIDs to allow commands like `/whitelist approve <name>` and to pretty-print lists.
@@ -16,4 +21,3 @@ All notable changes to GateKeeper will be documented in this file.
 
 Notes:
 - Security/integrity is unchanged: only SteamIDs in `whitelist.json` grant access. Names may collide; the cache is purely for convenience.
-

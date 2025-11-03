@@ -158,6 +158,8 @@ public class WhitelistManager {
      */
     public synchronized Long findAuthByName(Server server, String name) {
         if (server == null || name == null) return null;
+        // Ensure world paths and name cache are initialized/loaded
+        ensureWorld(server);
         String nlow = name.toLowerCase(Locale.ENGLISH);
         // online clients
         for (int i = 0; i < server.getSlots(); i++) {
@@ -181,6 +183,8 @@ public class WhitelistManager {
     /** Resolve a SteamID to last-known player name (online preferred, else saved). */
     public synchronized String getNameByAuth(Server server, long auth) {
         if (server == null) return null;
+        // Ensure world paths and name cache are initialized/loaded
+        ensureWorld(server);
         for (int i = 0; i < server.getSlots(); i++) {
             necesse.engine.network.server.ServerClient c = server.getClient(i);
             if (c != null && c.authentication == auth) {
