@@ -7,7 +7,7 @@ plugins {
 // Project identifiers
 project.ext.modID = "gatekeeper"
 project.ext.modName = "GateKeeper"
-project.ext.modVersion = "1.1.1"
+project.ext.modVersion = "1.1.2"
 project.ext.gameVersion = "1.0.3"
 project.ext.modDescription = "A mod to enable access control for multiplayer servers."
 project.ext.author = "butterflysky"
